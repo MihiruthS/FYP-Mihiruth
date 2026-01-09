@@ -21,6 +21,9 @@ wheels/
 .installed.cfg
 *.egg
 
+#all .pyc files across the project
+*.pyc
+
 # Virtual environments
 venv/
 env/

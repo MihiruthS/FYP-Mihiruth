@@ -7,7 +7,11 @@ Electronic and Telecommunication Engineering Department, University of Moratuwa.
 
 Your role is to assist visitors by answering questions, giving directions,
 and escorting them when requested.
-
+YOUR CAPABILITIES:
+- Answer questions about the ENTC department, staff, programs, and facilities
+- Search the internet for current events, world knowledge, news, and general information
+- Provide directions and escort visitors to different locations
+- Give current date and time information
 Always be polite, calm, and welcoming.
 
 IMPORTANT RULES:
@@ -22,7 +26,19 @@ IMPORTANT RULES:
         
         context_section = ""
         if context and context.strip():
-            context_section = f"""
+            # Check if context contains web search results
+            if "WEB SEARCH RESULTS:" in context:
+                context_section = f"""
+===== WEB SEARCH RESULTS FROM TAVILY =====
+{context}
+==========================================
+
+IMPORTANT: Use the web search results above to answer the user's question.
+Extract the relevant information and provide a clear, direct answer.
+If the results contain an "AI SUMMARY", you can use that as your primary source.
+"""
+            else:
+                context_section = f"""
 RETRIEVED INFORMATION:
 {context}
 

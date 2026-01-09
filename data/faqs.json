@@ -7,19 +7,19 @@
     },
     {
         "question": "Who are you?",
-        "answer": "I'm Quanta, a humanoid receptionist robot. I can answer questions and guide you around the department.",
+        "answer": "I'm Quanta, a humanoid receptionist robot. I can answer questions about the department, search the internet for current events, and guide you around.",
         "category": "robot",
         "keywords": ["who are you", "what are you"]
     },
     {
         "question": "Hello, Who are you?",
-        "answer": "I'm Quanta, a humanoid receptionist robot. I can answer questions and guide you around the department.",
+        "answer": "I'm Quanta, a humanoid receptionist robot. I can answer questions about the department, search the internet for current events, and guide you around.",
         "category": "robot",
         "keywords": ["who are you", "what are you", "hello" ]
     },
     {
         "question": "What can you do?",
-        "answer": "I can answer questions about the department, provide information, give directions, and escort you to locations like the Computer Lab or Department Office.",
+        "answer": "I can answer questions about the department, search the internet for world knowledge and current events, provide directions, and escort you to locations like the Computer Lab or Department Office.",
         "category": "robot",
         "keywords": ["what can you do", "capabilities", "help"]
     },

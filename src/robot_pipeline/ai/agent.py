@@ -27,6 +27,11 @@ try:
 except ImportError:
     FAQDatabase = None
 
+try:
+    from robot_pipeline.ai.web_search import WebSearch
+except ImportError:
+    WebSearch = None
+
 
 class AIAgent:
     """
@@ -46,6 +51,7 @@ class AIAgent:
         temperature: float = 0.7,
         use_rag: bool = True,
         use_faq: bool = True,
+        use_web_search: bool = True,
     ):
         """
         Initialize the AI agent.
@@ -59,6 +65,7 @@ class AIAgent:
             temperature: Sampling temperature (0.0 to 1.0)
             use_rag: Whether to use RAG for context retrieval
             use_faq: Whether to check FAQ database first
+            use_web_search: Whether to use Tavily web search for general questions
         """
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
         if not self.api_key:
@@ -77,6 +84,17 @@ class AIAgent:
         self.faq_database = faq_database
         self.use_rag = use_rag and rag_database is not None
         self.use_faq = use_faq and faq_database is not None
+        
+        # Initialize Tavily web search
+        self.web_search = None
+        self.use_web_search = use_web_search
+        if use_web_search and WebSearch:
+            try:
+                self.web_search = WebSearch()
+            except Exception as e:
+                print(f"⚠️ Web search initialization failed: {e}")
+                self.use_web_search = False
+        
         self.conversation_history = []
         
         # Simple LRU cache for RAG contexts (speeds up repeated queries)
@@ -89,6 +107,8 @@ class AIAgent:
             print("🔍 RAG enabled - AI will use knowledge base for responses")
         else:
             print("💭 RAG disabled - AI will use only training knowledge")
+        if self.use_web_search:
+            print("🌐 Web search enabled (Tavily) - Can answer current events")
         
         # Department-related keywords for smart RAG filtering
         self.department_keywords = [
@@ -126,30 +146,39 @@ class AIAgent:
         # Default to using RAG for anything that might be department-related
         return True
     
-    def _build_system_prompt(self, user_input: str, skip_rag: bool = False) -> str:
-        """Build dynamic system prompt using PromptGenerator and RAG context."""
+    def _build_system_prompt(self, user_input: str, skip_rag: bool = False, web_context: str = "") -> str:
+        """Build dynamic system prompt using PromptGenerator, RAG context, and web search."""
         # Retrieve relevant context from RAG if enabled
-        context = ""
+        rag_context = ""
         if not skip_rag and self.use_rag and self.rag_database:
             # Check cache first
             cache_key = user_input.lower().strip()
             if cache_key in self._rag_cache:
-                context = self._rag_cache[cache_key]
+                rag_context = self._rag_cache[cache_key]
                 # Move to end (most recently used)
                 self._rag_cache.move_to_end(cache_key)
             else:
                 # Retrieve from RAG
-                context = self.rag_database.get_context_string(
+                rag_context = self.rag_database.get_context_string(
                     query=user_input,
                     k=3,  # Retrieve top 3 relevant chunks (faster)
                     max_length=1200  # Limit context length (faster processing)
                 )
                 
                 # Cache the result
-                self._rag_cache[cache_key] = context
+                self._rag_cache[cache_key] = rag_context
                 # Limit cache size
                 if len(self._rag_cache) > self._max_cache_size:
                     self._rag_cache.popitem(last=False)  # Remove oldest
+        
+        # Merge web context and RAG context
+        context = ""
+        if web_context and rag_context:
+            context = web_context + "\n\n" + rag_context
+        elif web_context:
+            context = web_context
+        elif rag_context:
+            context = rag_context
         
         if self.prompt_generator:
             # Build chat history string
@@ -205,14 +234,20 @@ converted to speech."""
                 
                 return faq_answer
         
-        # Step 2: Check if query needs department knowledge
+        # Step 2: Check if query needs web search
+        web_context = ""
+        if self.use_web_search and self.web_search:
+            if self.web_search.needs_web_search(user_input):
+                web_context = self.web_search.search(user_input, max_results=2)
+        
+        # Step 3: Check if query needs department knowledge
         needs_rag = self._needs_department_knowledge(user_input)
         
-        if not needs_rag:
+        if not needs_rag and not web_context:
             print(f"⚡ Simple query detected - Skipping RAG for faster response")
         
-        # Step 3: Build system prompt (with or without RAG)
-        system_prompt = self._build_system_prompt(user_input, skip_rag=not needs_rag)
+        # Step 4: Build system prompt (with RAG and/or web search)
+        system_prompt = self._build_system_prompt(user_input, skip_rag=not needs_rag, web_context=web_context)
         
         # Build messages for the LLM
         messages = [SystemMessage(content=system_prompt)]
@@ -273,14 +308,20 @@ converted to speech."""
                 yield faq_answer
                 return
         
-        # Step 2: Check if query needs department knowledge
+        # Step 2: Check if query needs web search
+        web_context = ""
+        if self.use_web_search and self.web_search:
+            if self.web_search.needs_web_search(user_input):
+                web_context = self.web_search.search(user_input, max_results=2)
+        
+        # Step 3: Check if query needs department knowledge
         needs_rag = self._needs_department_knowledge(user_input)
         
-        if not needs_rag:
+        if not needs_rag and not web_context:
             print(f"⚡ Simple query detected - Skipping RAG for faster response")
         
-        # Step 3: Build system prompt (with or without RAG)
-        system_prompt = self._build_system_prompt(user_input, skip_rag=not needs_rag)
+        # Step 4: Build system prompt (with RAG and/or web search)
+        system_prompt = self._build_system_prompt(user_input, skip_rag=not needs_rag, web_context=web_context)
         
         # Build messages
         messages = [SystemMessage(content=system_prompt)]

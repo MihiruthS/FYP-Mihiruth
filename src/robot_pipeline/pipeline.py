@@ -181,11 +181,27 @@ class RobotVoicePipeline:
         buffer = ""
         async for chunk in self.agent.think_stream(user_text):
             buffer += chunk
-            if any(p in buffer for p in [". ", "? ", "! "]):
-                audio = self.tts.synthesize_stream(buffer)
-                await self.audio_playback.play_stream(audio)
-                buffer = ""
+            
+            # Split buffer at punctuation boundaries
+            while True:
+                # Find the earliest punctuation mark followed by space
+                split_pos = -1
+                for punct in [". ", "! ", "? ", ", "]:
+                    pos = buffer.find(punct)
+                    if pos != -1 and (split_pos == -1 or pos < split_pos):
+                        split_pos = pos + len(punct)
+                
+                # If we found a complete sentence/phrase, synthesize it
+                if split_pos > 0:
+                    sentence = buffer[:split_pos].strip()
+                    if sentence:
+                        audio = self.tts.synthesize_stream(sentence)
+                        await self.audio_playback.play_stream(audio)
+                    buffer = buffer[split_pos:]
+                else:
+                    break
 
+        # Synthesize any remaining text
         if buffer.strip():
             audio = self.tts.synthesize_stream(buffer)
             await self.audio_playback.play_stream(audio)
