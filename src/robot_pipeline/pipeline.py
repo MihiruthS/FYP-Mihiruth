@@ -155,7 +155,7 @@ class RobotVoicePipeline:
             if len(sentences) == 1 and len(text_cleaned.split()) <= 3:
                 if any(sleep_word in text_lower for sleep_word in self.sleep_words):
                     self.is_awake = False
-                    await self._speak("Have a nice day. Say Hey Quanta when you need me.")
+                    await self._speak("Have a nice day")
                     return True
             
             # Also check if the last sentence is ONLY a goodbye (handles "answer. Thank you!")

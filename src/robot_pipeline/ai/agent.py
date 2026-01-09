@@ -89,12 +89,48 @@ class AIAgent:
             print("🔍 RAG enabled - AI will use knowledge base for responses")
         else:
             print("💭 RAG disabled - AI will use only training knowledge")
+        
+        # Department-related keywords for smart RAG filtering
+        self.department_keywords = [
+            "department", "entc", "electronic", "telecommunication", "biomedical",
+            "university", "moratuwa", "professor", "dr ", "lecturer", "staff",
+            "lab", "laboratory", "research", "facility", "program", "course",
+            "degree", "bachelor", "master", "phd", "undergraduate", "graduate",
+            "head", "hod", "office", "location", "where is", "take me",
+            "computer lab", "conference", "building", "room", "floor",
+            "club", "student", "admission", "enroll", "study", "learn"
+        ]
     
-    def _build_system_prompt(self, user_input: str) -> str:
+    def _needs_department_knowledge(self, query: str) -> bool:
+        """
+        Determine if a query needs department-specific knowledge from RAG.
+        Returns False for general questions (time, date, greetings, etc.)
+        Returns True for department-related questions.
+        """
+        query_lower = query.lower()
+        
+        # Skip RAG for simple general queries
+        general_patterns = [
+            "time", "date", "today", "now", "current",
+            "hello", "hi", "hey", "good morning", "good afternoon",
+            "how are you", "thank you", "thanks", "bye", "goodbye",
+            "what is your name", "who are you", "what can you do"
+        ]
+        
+        # If it's a short general query, don't use RAG
+        if any(pattern in query_lower for pattern in general_patterns):
+            # But if it also contains department keywords, still use RAG
+            if not any(keyword in query_lower for keyword in self.department_keywords):
+                return False
+        
+        # Default to using RAG for anything that might be department-related
+        return True
+    
+    def _build_system_prompt(self, user_input: str, skip_rag: bool = False) -> str:
         """Build dynamic system prompt using PromptGenerator and RAG context."""
         # Retrieve relevant context from RAG if enabled
         context = ""
-        if self.use_rag and self.rag_database:
+        if not skip_rag and self.use_rag and self.rag_database:
             # Check cache first
             cache_key = user_input.lower().strip()
             if cache_key in self._rag_cache:
@@ -169,9 +205,14 @@ converted to speech."""
                 
                 return faq_answer
         
-        # Step 2: Fall back to RAG + LLM for complex queries
-        # Build dynamic system prompt
-        system_prompt = self._build_system_prompt(user_input)
+        # Step 2: Check if query needs department knowledge
+        needs_rag = self._needs_department_knowledge(user_input)
+        
+        if not needs_rag:
+            print(f"⚡ Simple query detected - Skipping RAG for faster response")
+        
+        # Step 3: Build system prompt (with or without RAG)
+        system_prompt = self._build_system_prompt(user_input, skip_rag=not needs_rag)
         
         # Build messages for the LLM
         messages = [SystemMessage(content=system_prompt)]
@@ -229,13 +270,17 @@ converted to speech."""
                 if len(self.conversation_history) > 10:
                     self.conversation_history = self.conversation_history[-10:]
                 
-                # Yield the complete FAQ answer (no streaming needed)
                 yield faq_answer
                 return
         
-        # Step 2: Fall back to RAG + LLM for complex queries
-        # Build dynamic system prompt
-        system_prompt = self._build_system_prompt(user_input)
+        # Step 2: Check if query needs department knowledge
+        needs_rag = self._needs_department_knowledge(user_input)
+        
+        if not needs_rag:
+            print(f"⚡ Simple query detected - Skipping RAG for faster response")
+        
+        # Step 3: Build system prompt (with or without RAG)
+        system_prompt = self._build_system_prompt(user_input, skip_rag=not needs_rag)
         
         # Build messages
         messages = [SystemMessage(content=system_prompt)]
