@@ -1,0 +1,23 @@
+-------------------------------------------------------------------------------------------
+
+Graduate Programs
+The department offers a comprehensive graduate degree program comprising research degrees and coursework-based masters’ degrees. The array of research degrees consists of one-year full-time master’s degrees leading to M.Sc. qualifications, two-year full-time master’s degrees leading to M.Phil. qualifications, and three-year (minimum) Ph.D. degree. The research degrees are for those who wish to engage in research careers or academia. There are two coursework based (taught) master’s degree programs: M.Sc. in Electronics and Automation and M.Sc. in Telecommunications. The aim of the taught programs is to empower engineering practitioners with field-specific advanced knowledge and skills. They also create a pathway for research.
+To apply for research degrees (M.Sc., M.Phil. or Ph.D.), Contact a potential supervisor that works in your area of interest and get his or her consent.
+
+--------------------------------------------------------------------------------------------
+
+About Telecommunications Master's Program Course
+The programme targets practicing engineers who wish to build and advance their careers in the field of Telecommunications, and also as a stepping stone for those who aspire to pursue advanced research in Telecommunications. The MSc/PG Diploma Program in Telecommunications is built around a set of core course modules considered fundamental to a thorough understanding of the broad field of telecommunications, and a set of elective course modules from a larger knowledge base covering the realms of Telecommunication Engineering practice. The course thus enables students to broaden their knowledge depending on the particular industry segment they are employed.
+The course also offers students who wish to embark on a research-oriented career, a very good grounding as many course modules have a strong research focus dealing with cutting edge research in Wireless and Optical Communications and Networks. A Directed Study module prepares them for effective research at the MSc level. Through the program, students have the opportunity to study real-world applications of theoretical concepts and algorithms. They conduct modeling, design, analysis, and simulation of different communication systems and networks through a wide range of prominent software and hardware tools and platforms. In addition, industry-related projects are carried out by students at both PG Diploma and MSc levels. Telecommunications Master's Program Course Duration is a six-term (two years) part-time or three terms (one year) full-time course. International Students are eligible for full-time MSc Only.
+
+About Electronic and Automation Master's Program Course
+This program is specially designed for practicing engineers in the Electronics, Electronics Technology, and Automation industry as well for fresh bachelor graduates who are aiming a career in those areas. The program will provide a sound knowledge, versatility, and make the students updated in these respective areas of study. The course starts with the PG Diploma; the first year, three-semester program, which includes the taught courses, assignments, projects, and presentations. Students will learn thoroughly about electronic system design, controller synthesis and implementation, embedded systems, microcontroller-PLCs-FPGA based designs with hands on exercises. After successful completion of the PG Diploma, students are eligible to carryout a research project over a duration of one year on part-time basis in order to pursue the MSc degree.
+
+------------------------------------------------------------------------------------------------
+
+Doctor of Philosophy
+Students seeking Ph.D. degrees can directly contact their prospective supervisors. Machine Vision, Robotics, Digital Systems, Telecommunications are the major research areas in the department for a Ph.D. The Duration of the Ph.D. course will be more than 3 years.
+
+-------------------------------------------------------------------------------------------------
+
+ENTC Short-time courses are part-time, paid course, aiming to address specific areas, in which engineers in the industry seek to enhance their specialized knowledge. The courses are designed to provide significant practical exposure. Nevertheless, sufficient analytical content is guaranteed.

@@ -1,0 +1,158 @@
+[
+    {
+        "question": "What is your name?",
+        "answer": "My name is Quanta, a humanoid receptionist robot developed at the University of Moratuwa.",
+        "category": "robot",
+        "keywords": ["name", "who are you", "your name"]
+    },
+    {
+        "question": "Who are you?",
+        "answer": "I'm Quanta, a humanoid receptionist robot. I can answer questions and guide you around the department.",
+        "category": "robot",
+        "keywords": ["who are you", "what are you"]
+    },
+    {
+        "question": "Hello, Who are you?",
+        "answer": "I'm Quanta, a humanoid receptionist robot. I can answer questions and guide you around the department.",
+        "category": "robot",
+        "keywords": ["who are you", "what are you", "hello" ]
+    },
+    {
+        "question": "What can you do?",
+        "answer": "I can answer questions about the department, provide information, give directions, and escort you to locations like the Computer Lab or Department Office.",
+        "category": "robot",
+        "keywords": ["what can you do", "capabilities", "help"]
+    },
+    {
+        "question": "What is this department?",
+        "answer": "This is the Electronic and Telecommunication Engineering Department at the University of Moratuwa.",
+        "category": "general",
+        "keywords": ["department", "what is", "entc"]
+    },
+    {
+        "question": "What is ENTC?",
+        "answer": "ENTC stands for Electronic and Telecommunication Engineering, our department at the University of Moratuwa.",
+        "category": "general",
+        "keywords": ["entc", "electronics", "telecommunication"]
+    },
+    {
+        "question": "Who is the head of the department?",
+        "answer": "The Head of the Department is Dr Thayaparan Subramaniam.",
+        "category": "staff",
+        "keywords": ["head", "hod", "head of department", "department head"]
+    },
+    {
+        "question": "Who is the head of department?",
+        "answer": "The Head of the Department is Dr Thayaparan Subramaniam.",
+        "category": "staff",
+        "keywords": ["head", "hod"]
+    },
+    {
+        "question": "What programs do you offer?",
+        "answer": "We offer undergraduate programs in Electronic and Telecommunication Engineering and Biomedical Engineering, plus postgraduate programs including M.Sc., M.Phil., and Ph.D.",
+        "category": "programs",
+        "keywords": ["programs", "courses", "degrees", "study"]
+    },
+    {
+        "question": "What undergraduate programs are available?",
+        "answer": "We offer two undergraduate honors programs: Electronic and Telecommunication Engineering and Biomedical Engineering.",
+        "category": "programs",
+        "keywords": ["undergraduate", "bachelor", "degree"]
+    },
+    {
+        "question": "Do you have postgraduate programs?",
+        "answer": "Yes, we offer MSC, Master of Philosophy, and PhD. programs.",
+        "category": "programs",
+        "keywords": ["postgraduate", "masters", "phd", "msc", "mphil"]
+    },
+    {
+        "question": "What is the Electronic Club?",
+        "answer": "The Electronic Club is our official student association focusing on community service and professional development. It has four branches: Main, PR, SLRC, and SPARK.",
+        "category": "student_life",
+        "keywords": ["electronic club", "club", "student association"]
+    },
+    {
+        "question": "Tell me about the Electronic Club",
+        "answer": "The Electronic Club is the student association of our department with four branches: Main, PR, SLRC, and SPARK. It focuses on community service and professional development.",
+        "category": "student_life",
+        "keywords": ["electronic club", "students"]
+    },
+    {
+        "question": "Where is the computer lab?",
+        "answer": "The Computer Lab is located on the first floor. I can take you there if you'd like.",
+        "category": "location",
+        "keywords": ["computer lab", "lab", "computers"]
+    },
+    {
+        "question": "Where is the department office?",
+        "answer": "The Department Office is located on the first floor. I can escort you there.",
+        "category": "location",
+        "keywords": ["office", "department office", "admin"]
+    },
+    {
+        "question": "Where is the HOD office?",
+        "answer": "The Head of Department's office is located on the first floor. Would you like me to take you there?",
+        "category": "location",
+        "keywords": ["hod office", "head office"]
+    },
+    {
+        "question": "I want to go to the computer lab.",
+        "answer": "Computer lab is in the first floor. Shall I escort you there?",
+        "category": "location",
+        "keywords": ["computer lab", "lab", "want to go" ]
+    },
+    {
+        "question": "I want to go to the department office.",
+        "answer": "The department office is in the first floor. Shall I escort you there?",
+        "category": "location",
+        "keywords": ["office", "department office", "want to go" ]
+    },
+    {
+        "question": "I want to go to the HOD office.",
+        "answer": "The Head of Department's office is in the first floor. Shall I escort you there?",
+        "category": "location",
+        "keywords": ["hod office", "head office",  "want to go" ]
+    },
+    {
+        "question": "I want to go to the Conference Room.",
+        "answer": "The Conference Room is in the first floor. Shall I escort you there?",
+        "category": "location",
+        "keywords": ["conference room", "conference", "want to go" ]
+    },
+    {
+        "question": "Can you take me to the computer lab?",
+        "answer": "SURE, PLEASE FOLLOW ME TO THE COMPUTER LAB.",
+        "category": "escort",
+        "keywords": ["computer lab", "lab", "escort", "take me"]
+    },
+    {
+        "question": "Can you take me to the department office?",
+        "answer": "SURE, PLEASE FOLLOW ME TO THE DEPARTMENT OFFICE.",
+        "category": "escort",
+        "keywords": ["office", "department office", "admin", "escort", "take me"]
+    },
+    {
+        "question": "Can you take me to the HOD office?",
+        "answer": "SURE, PLEASE FOLLOW ME TO THE HEAD OF DEPARTMENT'S OFFICE.",
+        "category": "escort",
+        "keywords": ["hod office", "head office", "escort", "take me"]
+    },
+    {
+        "question": "Can you take me to the Conference Room?",
+        "answer": "SURE, PLEASE FOLLOW ME TO THE CONFERENCE ROOM.",
+        "category": "escort",
+        "keywords": ["conference room", "conference", "escort", "take me"]
+    },
+    {
+        "question": "How can I contact the department?",
+        "answer": "You can email us at info@ent.mrt.ac.lk or visit the Department Office.",
+        "category": "contact",
+        "keywords": ["contact", "email", "phone"]
+    },
+    {
+        "question": "What is the department email?",
+        "answer": "The department email is info@ent.mrt.ac.lk.",
+        "category": "contact",
+        "keywords": ["email", "contact"]
+    }
+]

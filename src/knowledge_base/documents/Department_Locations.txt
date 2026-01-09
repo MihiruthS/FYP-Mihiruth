@@ -1,0 +1,15 @@
+The analog electronic laboratory is on the second floor. Once you reach to the second floor through the elevator, turn left and go towards the end of the passage. Then you can see the analog electronic laboratory on your left hand side.
+The computer laboratory is on the first floor. Once you reach to the first floor you can see the computer laboratory on your lefthand side.
+The digital electronic laboratory is on the second floor. Once you reach to the second floor through the elevator, turn left and go towards the end of the passage. Then you can see the digital electronic laboratory in front of you.
+The telecommunication (Telecom) laboratory is on the third floor. Once you reach to the third floor go through the elevator, turn left and go towards the end of the passage. Then you can see the communication laboratory infront of you.
+The electronic workshop is on the second floor. Once you reach to the second floor through the elevator, turn right and go towards the end of the passage. Then you can see the electronic workshop on your lefthand side.
+The soldering room is on the second floor. Once you reach to the second floor through the elevator, the soldering room is right infront of you
+The PG seminar room is on the third floor. Once you reach to the third floor through the elevator, the PG seminar room is to the right of you.
+The radio room is on the roof top of the building.
+The ENTC1 hall is on the ground floor.Once you enter the department turn left and move straight. Then you can see the ENTC1 hall in front of you.
+The conference room is on the first floor.  Once you reach to the first floor go through the passage on your right hand side. Then turn right go some distance turn left and go toward the end of the passage. Then you can see the conference room infornt of you.
+The staff common room is on the first floor.  Once you reach to the first floor go through the passage on your right hand side. Then turn right go some distance turn left and go toward the end of the passage turn left and go on. Then you can see the staff common room.
+The department office is on the first floor. Once you reach to the first floor go through the passage on your right hand side. Then turn right and towards the end of the passage. Then you can see the department office on your lefthand side.
+The office of the head of department is on the first floor. Once you reach to the first floor go through the passage on your right hand side. Then turn right and go towards the end of the passage. Then you can see the office of the head of department on your lefthand side.
+The staff washroom is in the first floor. Once you go to the first floor through the elevator, turn right and the staff washroom to your right.
+Common washrooms are there in the ground floor, 2nd floor and third floor.

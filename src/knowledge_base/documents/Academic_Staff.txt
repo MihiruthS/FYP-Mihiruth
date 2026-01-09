@@ -1,0 +1,43 @@
+Academic Staff
+
+---------------------------------------------------------------------
+
+Head of the department
+The Head of the Department of Electronic and Telecommunication Engineering at the University of Moratuwa is Dr. Thayaparan Subramaniam. He holds a PhD from the University of Hong Kong and a Bachelor's degree from the University of Peradeniya.  His research focuses on high-temperature electronics, digital IC design, analog IP design, noise reduction techniques, and HW/SW partitioning. He teaches Analog Circuit Design, Digital IC Design, Electronics, Circuits & System Design, and Digital System Design modules for both undergraduate and postgraduate students. He has contributed to advancements in delay-locked loop techniques, power line communication, and high-speed Ethernet PCS design, with numerous journal and conference publications. His office hours are from 8:00 AM to 5:00 PM
+
+---------------------------------------------------------------------
+
+Professors Dileeka Dias is a distinguished academic and researcher in telecommunications, holding a PhD in Digital Mobile Communications from the University of California. She has expertise in areas such as Digital Signal Processing, Wireless Positioning, IoT, and Mobile Computing. Prof. Dias teaches various undergraduate courses at the University of Moratuwa, including Telecommunications, Mobile Computing, and Internet of Things. She has received multiple awards, including the National Science and Technology Awards for her contributions to sustainable development and engineering. Her research includes a wide range of topics, with numerous publications in wireless communication and sensor networks. Her office hours are from 8:00 am to 5:00 pm, and she is located in Room No: EB 118, Department of Electronic & Telecommunication Engineering.
+
+Professor Rohan Munasinghe specializes in robotics, control systems, and telerobotics. He earned his PhD in Advanced Systems Control from Saga National University. His research focuses on robotics, intelligent control, human-skill learning, UAVs, industrial robot arms, and astronomy. He teaches various courses such as Robotics, Autonomous Systems, Electronic Control Systems, and Astronomy for undergraduates, and Advanced Electronic Control Systems, Mechatronics, and Robotics for postgraduates at the University of Moratuwa. He has published research on force control, trajectory planning, and obstacle avoidance. His office is in Room No. EB 119 of the Electronic and Telecommunication Engineering Department, and his office hours are Monday to Friday from 08:00 AM to 05:00 PM.
+
+Dr. Ranga Rodrigo is a Senior Lecturer at the Department of Electronic and Telecommunication Engineering, University of Moratuwa, Sri Lanka. His research focuses on computer vision and deep learning, with particular interests in surveillance, scene understanding, tracking, and activity recognition. He is actively working on advancing robotics learning, designing novel deep network architectures, developing routing algorithms, and enhancing convolutional layers. Dr. Ranga Rodrigo earned his Master’s and Ph.D. degrees from Western University, Canada, in 2004 and 2008, respectively. He is a senior member of the IEEE (Institute of Electrical and Electronics Engineers), USA. His office is located in Room EB 111, Department of Electronic & Telecommunication Engineering, Faculty of Engineering, University of Moratuwa. Office hours are from 8:00 am to 5:00 pm.
+
+Dr. Sampath Perera is a Senior Lecturer at the Department of Electronic and Telecommunication Engineering. His research interests include radar signal processing, remote sensing, sparse signal processing, compressive sensing, machine learning, dictionary learning, and material characterization. He received his Ph.D. in Electrical Engineering and Information Technology from Ruhr-University Bochum, Germany. Dr. Sampath Perera teaches modules such as Pattern Recognition, Introduction to Engineering Optimization, and Radar and Navigation. His office is located in Room EB 111, Department of Electronic and Telecommunication Engineering. Office hours are from 8:00 am to 5:00 pm.
+
+Dr. Peshala Jayasekara is a Senior Lecturer in the Department of Electronic and Telecommunication Engineering at the University of Moratuwa, Sri Lanka. His primary area of work is Robotics, with research interests spanning Robotics, Localization, Mapping, State Estimation, and Control Theory. He earned his B.Sc. Eng. degree with first-class honors in 2006 from the University of Moratuwa. He later completed his M.Eng. and Ph.D. degrees in 2011 and 2014, respectively, at the Department of Electrical Engineering and Information Systems, University of Tokyo, Japan.
+
+Dr. Ajith Pasqual is a researcher in the fields of Computer Vision, Image Processing, Intelligent Transportation Systems, E-Commerce, the Human Visual System, and Genomic Signal Processing. He received his Ph.D. in Computer Vision from the University of Tokyo in 2001 and his Master of Engineering, also in Computer Vision, from the same university in 1998. He completed his Bachelor of Science in Engineering at the University of Moratuwa in 1993, specializing in Electronic and Telecommunication Engineering.
+
+There are 3 Professors in the department:
+Professor Dileeka Dias
+Professor Tharaka Samarasinghe
+Professor Rohan Munasinghe
+
+Senior Lecturers:
+Eng. A.T.L. Kithsiri Samarasinghe
+Dr. Ajith Pasqual
+Dr. Ranga Rodrigo
+Dr. Jayathu Samarawickrama
+Dr. Upeka Premaratne
+Dr. Thayaparan Subramaniam
+Dr. Mevan Gunawardena
+Dr. Peshala Jayasekara
+Dr. Chamira U. S. Edussooriya
+Dr. Kasun T. Hemachandra
+Dr. Samiru Gayan
+Dr. Rukshani Liyanaarachchi
+Dr. Subodha Charles
+Mr. Thilina S. Ambagahawaththa
+Dr. Sampath Perera
+Dr. Pranjeewan

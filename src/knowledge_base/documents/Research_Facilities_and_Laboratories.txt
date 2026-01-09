@@ -1,0 +1,49 @@
+-----------------------------------------------------------------------------------------------------------------------------------------------
+
+Postgraduate Labs are The Postgraduate laboratory, UAV Research Laboratory and Machine Vision Lab.
+
+Postgraduate Laboratory
+The Postgraduate laboratory is equipped with a variety of modern industrial devices and equipment such as logic analyzers, network analyzers, spectrum analyzers and programmable LCR meters. Pushing the department to its limits, postgraduate lab is highly utilized for most innovative technological researches with its state of the art equipment. Industry Instrument testing, designing and consultancy services are done in the Postgraduate Laboratory.
+
+UAV Research Laboratory
+UAV Research Laboratory facilitates both undergraduate and postgraduate research and development of unmanned ariel vehicles. The students working at the laboratory have developed fixed wing and multi-rotor helicopters which has state of the art technologies.
+
+Machine Vision Lab 
+Machine Vision laboratory provides the infrastructure for research related to Image Processing and Machine Vision. The laboratory has  high power computational environment such as Nvidia Tesla Server, multi processor workstations and Nvidia GeForce GPUs.
+
+--------------------------------------------------------------------------------------------------------------------------------------------------
+
+Undergraduate Labs are Analog Electronics Laboratory, Digital Electronics, Computer Laboratory, Telecommunication Laboratory, Opto-electronics Laboratory, Microwave Laboratory, Intelligent Machines Laboratory, UAV Research Laboratory, Machine Vision Lab, Biomedical Laboratory and Electronics Workshop.
+
+Analog Electronics Laboratory 
+Analog electronics laboratory is designed to give students a basic understanding of electronic circuits, characteristics of electronic devices and to aid in the art of recording data. It houses a variety of test equipment including oscilloscopes, signal generators, counters, analog/digital multimeters and power supplies. Projects and other activities carried out in the laboratory include the analysis and design of circuits utilizing both passive and active devices such as resistors, capacitors, inductors, diodes, transistors and op-amps. The analog electronic laboratory is on the second floor. Once you reach to the second floor go through the passage on your right hand side. Then turn left and go towards the end of the passage. Then you can see the analog electronic laboratory on your lefthand side.
+
+Digital Electronics Laboratory
+Digital Electronics laboratory is designed to give students “hands-on” experience with hardware such as discrete digital devices, microprocessors, microcontrollers and FPGAs. Students working in this laboratory utilize Hewlett-Packard design/development systems, embedded systems development platforms, programmable logic development systems and microprocessor trainers. A variety of advanced test equipment such as logic analyzers, digital storage oscilloscopes, digital multimeters and PC coupled instrumentation are available for testing. The digital electronic laboratory is on the second floor. Once you reach to the second floor go through the passage on your right hand side. Then turn left and go towards the end of the passage. Then you can see the digital electronic laboratory in front of you.
+
+Computer Laboratory 
+The Department computer laboratory consists of over 60 personal computers for students and five UNIX servers. The local area network links all the laboratories and staff rooms and has internet facility through the university/LEARN network. The computer laboratory is used by the undergraduate students for their assignments project work, internet browsing, e-mail and other computational needs. The entire department including lecture rooms, have wireless internet access.
+
+Telecommunication Laboratory 
+Telecommunication laboratory facilitates the students to understand the basic concepts of telecommunication such as modulation, multiplexing, detection of radio signals by construction/simulation. The Telecommunication laboratory is equipped with most modern equipment in the telecommunication field. A sweep generator test bench is used to measure the single tuned and double tuned amplifiers constructed. Spectrum analyzers are used to measure amplitude and frequency modulation. Students utilize wireless and land telephone systems implemented inside the laboratory for their studies. Laboratory experiments of television system are conducted using the TV trainer panel in the laboratory. The Telecommunication laboratory is on the third floor. Once you reach to the third floor go through the passage on your right hand side. Then turn left and go towards the end of the passage. Then you can see the telecommunication laboratory Infront of you.
+
+Opto-electronics Laboratory 
+Opto electronics laboratory is mainly used in the semesters 7 and 8 to conduct experiments related to optical fiber communications, It houses many high end equipment such as optical spectrum analyzers and OTDRs. This laboratory also has the facilities to check, calibrate and design optical communication equipment.
+
+Microwave Laboratory 
+The Microwave laboratory is used for the design and implementation of microwave communication systems that are used in the Industry. Students working in this lab have the opportunity to learn the concepts of design and applications through hands-on experience. The laboratory experience is devoted to microwave generation, transmission and reception. Industrial Instrument testing and calibrating are conducted in the Microwave laboratory.
+
+Intelligent Machines Laboratory
+Intelligent Machines laboratory is designed to handle robotics and automation related activities. It houses development boards, power devices, robot arms, and other devices such as a multitude of sensors and mechanical equipment. The students using the lab participate at many national and international robotics competitions.
+
+UAV Research Laboratory
+UAV Research Laboratory facilitates both undergraduate and postgraduate research and development of unmanned ariel vehicles. The students working at the laboratory have developed fixed wing and multi-rotor helicopters which has state of the art technologies.
+
+Machine Vision Lab 
+Machine Vision laboratory provides the infrastructure for research related to Image Processing and Machine Vision. The laboratory has  high power computational environment such as Nvidia Tesla Server, multi processor workstations and Nvidia GeForce GPUs.
+
+Biomedical Laboratory
+This newly built Biomedical laboratory provides a multitude of opportunities to students taking the biomedical engineering degree program. It trains the students on biomedical instrumentation and practice. It houses human model simulators and other calibration-grade instruments. For example, if the students develop a device to measure a person’s oxygen saturation (pulse oximetry) the human model simulator provides a good test bed to test the device. The laboratory is equipped with two optical microscopes. This immensely aids students working on final year projects that deal with biological tissue. Additionally, the laboratory consists of two clinical graded multi-parameter monitors enabling students to experience real world medical instruments. There are 7 BioPac devices that are used in routine laboratory practical sessions to explain the various physiological signals in the human body. This provides a platform for bio-signal acquisition, processing and analysis that can act as a reference against similar devices that students design.
+
+Electronics Workshop 
+With experienced engineers and technicians, and equipped with modern facilities, Electronics workshop provides a great support for undergraduate studies and projects. Students utilize the workshop to get hands on experience in good soldering practice and to build and test circuits for project work. Instruments available in the workshop such as winding machines, oscilloscopes, de-soldering stations, PCB drilling machines, hot air soldering gun, projects boards for testing and magnifying glasses. With Internet facilities in the workshop, datasheets, circuit details and all the other material needed are nearby. Industrial instrument repairing and designing are done under engineering consultancy by engineers in the electronic workshop.

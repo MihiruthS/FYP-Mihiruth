@@ -1,0 +1,279 @@
+"""
+AI Agent Module for Robot Voice Pipeline
+
+Uses LangChain with OpenAI to process user queries and generate responses.
+Integrates RAG (Retrieval-Augmented Generation) for knowledge-based responses.
+"""
+
+import os
+from typing import Optional
+from collections import OrderedDict
+
+from langchain_openai import ChatOpenAI
+from langchain_core.messages import HumanMessage, SystemMessage
+
+try:
+    from robot_pipeline.ai.prompts import PromptGenerator
+except ImportError:
+    PromptGenerator = None
+
+try:
+    from robot_pipeline.ai.rag_database import RAGDatabase
+except ImportError:
+    RAGDatabase = None
+
+try:
+    from robot_pipeline.ai.faq_database import FAQDatabase
+except ImportError:
+    FAQDatabase = None
+
+
+class AIAgent:
+    """
+    AI Agent for processing user queries and generating responses.
+    
+    Uses OpenAI's GPT models via LangChain with RAG (Retrieval-Augmented Generation)
+    to provide knowledge-based responses using documents from the vector database.
+    """
+    
+    def __init__(
+        self,
+        model: str = "gpt-4o-mini",
+        api_key: Optional[str] = None,
+        prompt_generator: Optional[object] = None,
+        rag_database: Optional[object] = None,
+        faq_database: Optional[object] = None,
+        temperature: float = 0.7,
+        use_rag: bool = True,
+        use_faq: bool = True,
+    ):
+        """
+        Initialize the AI agent.
+        
+        Args:
+            model: OpenAI model to use (default: gpt-4o-mini)
+            api_key: OpenAI API key (reads from OPENAI_API_KEY env var if not provided)
+            prompt_generator: PromptGenerator instance for dynamic prompts
+            rag_database: RAGDatabase instance for document retrieval
+            faq_database: FAQDatabase instance for fast FAQ responses
+            temperature: Sampling temperature (0.0 to 1.0)
+            use_rag: Whether to use RAG for context retrieval
+            use_faq: Whether to check FAQ database first
+        """
+        self.api_key = api_key or os.getenv("OPENAI_API_KEY")
+        if not self.api_key:
+            raise ValueError("OPENAI_API_KEY environment variable is required")
+        
+        self.llm = ChatOpenAI(
+            model=model,
+            api_key=self.api_key,
+            temperature=0.2,  # Even lower for faster, more focused responses
+            streaming=True,  # Enable streaming for real-time responses
+            max_tokens=80,  # Limit response length for speed (1-2 sentences)
+        )
+        
+        self.prompt_generator = prompt_generator
+        self.rag_database = rag_database
+        self.faq_database = faq_database
+        self.use_rag = use_rag and rag_database is not None
+        self.use_faq = use_faq and faq_database is not None
+        self.conversation_history = []
+        
+        # Simple LRU cache for RAG contexts (speeds up repeated queries)
+        self._rag_cache = OrderedDict()
+        self._max_cache_size = 20
+        
+        if self.use_faq:
+            print("⚡ FAQ enabled - Fast responses for common questions")
+        if self.use_rag:
+            print("🔍 RAG enabled - AI will use knowledge base for responses")
+        else:
+            print("💭 RAG disabled - AI will use only training knowledge")
+    
+    def _build_system_prompt(self, user_input: str) -> str:
+        """Build dynamic system prompt using PromptGenerator and RAG context."""
+        # Retrieve relevant context from RAG if enabled
+        context = ""
+        if self.use_rag and self.rag_database:
+            # Check cache first
+            cache_key = user_input.lower().strip()
+            if cache_key in self._rag_cache:
+                context = self._rag_cache[cache_key]
+                # Move to end (most recently used)
+                self._rag_cache.move_to_end(cache_key)
+            else:
+                # Retrieve from RAG
+                context = self.rag_database.get_context_string(
+                    query=user_input,
+                    k=3,  # Retrieve top 3 relevant chunks (faster)
+                    max_length=1200  # Limit context length (faster processing)
+                )
+                
+                # Cache the result
+                self._rag_cache[cache_key] = context
+                # Limit cache size
+                if len(self._rag_cache) > self._max_cache_size:
+                    self._rag_cache.popitem(last=False)  # Remove oldest
+        
+        if self.prompt_generator:
+            # Build chat history string
+            chat_history = ""
+            for msg in self.conversation_history[-4:]:  # Last 2 exchanges (faster)
+                if isinstance(msg, HumanMessage):
+                    chat_history += f"User: {msg.content}\n"
+                else:
+                    chat_history += f"Robot: {msg.content}\n"
+            
+            return self.prompt_generator._base_prompt(
+                user="Visitor",
+                user_input=user_input,
+                chat_history=chat_history,
+                instructions="",
+                context=context
+            )
+        else:
+            # Default prompt with context
+            base_prompt = """You are a helpful robot assistant. You can answer questions, 
+provide information, and assist with various tasks. Be concise and friendly 
+in your responses. Keep your answers relatively short since they will be 
+converted to speech."""
+            
+            if context:
+                return f"{base_prompt}\n\n{context}"
+            return base_prompt
+    
+    async def think(self, user_input: str) -> str:
+        """
+        Process user input and generate a response.
+        Uses FAQ → RAG → LLM pipeline for optimal speed and accuracy.
+        
+        Args:
+            user_input: The user's query or statement
+        
+        Returns:
+            The AI agent's response text
+        """
+        # Step 1: Try FAQ first (instant, no API cost)
+        if self.use_faq and self.faq_database:
+            faq_answer = self.faq_database.get_answer(user_input)
+            if faq_answer:
+                print(f"⚡ FAQ Hit! Instant response")
+                # Update conversation history
+                self.conversation_history.append(HumanMessage(content=user_input))
+                from langchain_core.messages import AIMessage
+                self.conversation_history.append(AIMessage(content=faq_answer))
+                
+                # Keep history manageable
+                if len(self.conversation_history) > 10:
+                    self.conversation_history = self.conversation_history[-10:]
+                
+                return faq_answer
+        
+        # Step 2: Fall back to RAG + LLM for complex queries
+        # Build dynamic system prompt
+        system_prompt = self._build_system_prompt(user_input)
+        
+        # Build messages for the LLM
+        messages = [SystemMessage(content=system_prompt)]
+        
+        # Add conversation history
+        messages.extend(self.conversation_history)
+        
+        # Add current user input
+        messages.append(HumanMessage(content=user_input))
+        
+        # Get response from LLM
+        print(f"🤔 Thinking about: '{user_input}'")
+        
+        try:
+            response = await self.llm.ainvoke(messages)
+            response_text = response.content
+            
+            # Update conversation history
+            self.conversation_history.append(HumanMessage(content=user_input))
+            self.conversation_history.append(response)
+            
+            # Keep conversation history manageable (last 10 messages)
+            if len(self.conversation_history) > 10:
+                self.conversation_history = self.conversation_history[-10:]
+            
+            print(f"💡 Response: '{response_text}'")
+            return response_text
+            
+        except Exception as e:
+            print(f"❌ Error generating response: {e}")
+            return "I'm sorry, I encountered an error processing your request."
+    
+    async def think_stream(self, user_input: str):
+        """
+        Process user input and stream the response token by token.
+        Uses FAQ → RAG → LLM pipeline for optimal speed.
+        
+        Args:
+            user_input: The user's query or statement
+        
+        Yields:
+            Response text chunks as they are generated
+        """
+        # Step 1: Try FAQ first (instant, no streaming needed)
+        if self.use_faq and self.faq_database:
+            faq_answer = self.faq_database.get_answer(user_input)
+            if faq_answer:
+                print(f"⚡ FAQ Hit! Instant response")
+                # Update conversation history
+                self.conversation_history.append(HumanMessage(content=user_input))
+                from langchain_core.messages import AIMessage
+                self.conversation_history.append(AIMessage(content=faq_answer))
+                
+                # Keep history manageable
+                if len(self.conversation_history) > 10:
+                    self.conversation_history = self.conversation_history[-10:]
+                
+                # Yield the complete FAQ answer (no streaming needed)
+                yield faq_answer
+                return
+        
+        # Step 2: Fall back to RAG + LLM for complex queries
+        # Build dynamic system prompt
+        system_prompt = self._build_system_prompt(user_input)
+        
+        # Build messages
+        messages = [SystemMessage(content=system_prompt)]
+        messages.extend(self.conversation_history)
+        messages.append(HumanMessage(content=user_input))
+        
+        print(f"🤔 Thinking about: '{user_input}'")
+        
+        try:
+            full_response = ""
+            
+            # Stream response chunks
+            async for chunk in self.llm.astream(messages):
+                if chunk.content:
+                    full_response += chunk.content
+                    yield chunk.content
+            
+            # Update conversation history
+            self.conversation_history.append(HumanMessage(content=user_input))
+            from langchain_core.messages import AIMessage
+            self.conversation_history.append(AIMessage(content=full_response))
+            
+            # Keep history manageable
+            if len(self.conversation_history) > 10:
+                self.conversation_history = self.conversation_history[-10:]
+            
+            print(f"💡 Response: '{full_response}'")
+            
+        except Exception as e:
+            print(f"❌ Error generating response: {e}")
+            yield "I'm sorry, I encountered an error processing your request."
+    
+    def clear_history(self):
+        """Clear the conversation history."""
+        self.conversation_history = []
+        print("🧹 Conversation history cleared")
+    
+    def set_system_prompt(self, prompt: str):
+        """Update the system prompt."""
+        self.system_prompt = prompt
+        print("📝 System prompt updated")
