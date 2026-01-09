@@ -2,17 +2,6 @@
 Robot Voice Pipeline - Main Orchestrator
 
 A complete voice pipeline for robots: Listen → Think → Answer → Loop
-
-This pipeline:
-1. Listens to user speech via microphone
-2. Transcribes speech to text using AssemblyAI
-3. Processes the query using an AI agent (OpenAI GPT)
-4. Synthesizes a speech response using Cartesia TTS
-5. Plays the response through speakers
-6. Returns to listening for the next query
-
-Usage:
-    python main.py
 """
 
 import asyncio
@@ -30,62 +19,54 @@ from robot_pipeline.ai.prompts import PromptGenerator
 from robot_pipeline.ai.rag_database import RAGDatabase
 from robot_pipeline.ai.faq_database import FAQDatabase
 
-# Get the project root directory (parent of src/)
+
 PROJECT_ROOT = Path(__file__).parent.parent.parent.absolute()
 
 
 class RobotVoicePipeline:
-    """
-    Complete voice interaction pipeline for robots.
-    
-    Orchestrates the entire flow: listen → transcribe → think → speak
-    """
-    
     def __init__(self):
-        """
-        Initialize the robot voice pipeline with PromptGenerator and RAG Database.
-        """
-        # Initialize prompt generator
+        self.is_awake = False
+        # Wake words with common STT mishearings of "Quanta"
+        self.wake_words = [
+            "hey quanta", "hello quanta", "hi quanta",
+            "hey conda", "hello conda", "hi conda",
+            "hey konda", "hello konda", "hi konda",
+            "hey konta", "hello konta", "hi konta",
+            "hey quantum", "hello quantum", "hi quantum",
+            "hey pointer", "hello pointer", "hi pointer",
+            "hey fonda", "hello fonda", "hi fonda",
+            "hey enter", "hello enter", "hi enter",
+            "he enter", "hey counter", "hello counter",
+            "hey panda", "hello panda", "hi panda",
+            "hey honda", "hello honda", "hi honda",
+            "hey hong", "hello hong", "hi hong",
+            "hey contact", "hello contact", "hi contact",
+            "hey quota", "hello quota", "hi quota"
+        ]
+        self.sleep_words = ["exit", "quit", "stop", "goodbye", "bye", "thank you", "thanks"]
+
         self.prompt_generator = PromptGenerator()
-        
-        # Initialize FAQ database (fast responses)
+
         print("⚡ Initializing FAQ Database...")
-        self.faq_database = None
         try:
             self.faq_database = FAQDatabase()
-            if self.faq_database and self.faq_database.faqs:
-                faq_stats = self.faq_database.get_stats()
-                print(f"✅ FAQ Database ready with {faq_stats['total_faqs']} questions")
-            else:
-                print("⚠️  FAQ Database initialized but empty")
-                self.faq_database = None
+            stats = self.faq_database.get_stats()
+            print(f"✅ FAQ Database ready with {stats['total_faqs']} questions")
         except Exception as e:
-            print(f"⚠️  FAQ Database initialization failed: {e}")
+            print(f"⚠️ FAQ Database failed: {e}")
             self.faq_database = None
-        
-        # Initialize RAG database with absolute paths
+
         print("🔍 Initializing RAG Database...")
-        chroma_db_path = PROJECT_ROOT / "data" / "chroma_db"
-        docs_path = PROJECT_ROOT / "src" / "knowledge_base" / "documents"
-        
-        print(f"   Database: {chroma_db_path}")
-        print(f"   Documents: {docs_path}")
-        
         self.rag_database = RAGDatabase(
-            persist_directory=str(chroma_db_path),
-            documents_directory=str(docs_path)
+            persist_directory=str(PROJECT_ROOT / "data" / "chroma_db"),
+            documents_directory=str(PROJECT_ROOT / "src" / "knowledge_base" / "documents")
         )
-        
-        # Display database stats
-        stats = self.rag_database.get_stats()
-        if stats.get("status") == "ready":
-            print(f"✅ RAG Database ready with {stats.get('total_chunks', 0)} knowledge chunks")
-        
-        # Initialize components
+
         self.audio_capture = AudioCapture(sample_rate=16000)
         self.audio_playback = AudioPlayback(sample_rate=24000)
         self.stt = SpeechToText()
         self.tts = TextToSpeech()
+
         self.agent = AIAgent(
             prompt_generator=self.prompt_generator,
             rag_database=self.rag_database,
@@ -93,193 +74,175 @@ class RobotVoicePipeline:
             use_rag=True,
             use_faq=True
         )
-        
-        print("🤖 Robot Voice Pipeline Initialized with RAG")
-    
-    async def process_query(self) -> bool:
-        """
-        Process a single query: listen → transcribe → think → speak.
-        Uses VAD (Voice Activity Detection) - no fixed duration.
-        Streams TTS in real-time as LLM generates sentences.
-        
-        Returns:
-            True to continue, False to stop the pipeline
-        """
-        print("\n" + "="*60)
-        print("👂 LISTENING... (speak now, I'll detect when you stop)")
-        print("="*60)
-        
-        # Start audio capture
+
+        print("🤖 Robot Voice Pipeline Initialized")
+
+    def _clean_text(self, text: str) -> str:
+        """Remove punctuation and normalize text for matching."""
+        import string
+        # Remove punctuation and convert to lowercase
+        text = text.lower().strip()
+        text = text.translate(str.maketrans('', '', string.punctuation))
+        return text
+
+    async def listen_for_wake_word(self) -> bool:
+        print("\n😴 Sleeping... Say 'Hey Quanta'")
+
         self.audio_capture.start()
-        
-        # Create stop event for VAD
-        stop_audio_event = asyncio.Event()
-        
-        # Create audio stream without duration limit (VAD will handle it)
-        audio_stream = self.audio_capture.stream(stop_event=stop_audio_event)
-        
+        stop_event = asyncio.Event()
+        audio_stream = self.audio_capture.stream(stop_event=stop_event)
+
         try:
-            # Transcribe audio stream with VAD
             transcript = None
-            
-            # This will automatically stop when AssemblyAI detects speech end
             async for text in self.stt.transcribe_stream(audio_stream):
                 transcript = text
-                # Signal audio capture to stop
-                stop_audio_event.set()
-                print(f"📝 You said: '{text}'")
-            
-            # Stop audio capture
+                stop_event.set()
+                print(f"📝 Heard: {text}")
+
             self.audio_capture.stop()
-            
-            # Check if we got a transcript
-            if not transcript or not transcript.strip():
-                print("❌ No speech detected. Try again.")
+
+            if not transcript:
                 return True
-            
-            # Check for exit commands
-            if transcript.lower().strip() in ["exit", "quit", "stop", "goodbye", "bye"]:
-                print("👋 Goodbye!")
+
+            # Clean text by removing punctuation for better matching
+            text = self._clean_text(transcript)
+
+            if any(w in text for w in self.wake_words):
+                self.is_awake = True
+                await self._speak("Hello! How can I help you?")
+                return True
+
+            # Also check original text for sleep words (with punctuation)
+            if any(sleep_word in transcript.lower() for sleep_word in self.sleep_words):
                 return False
-            
-            # Think and Speak: Stream response with real-time TTS
-            # Ensure TTS and audio are ready (will skip if already connected)
-            if not self.tts._is_connected:
-                await self.tts.connect()
-            if not self.audio_playback._is_playing:
-                self.audio_playback.start()
-            
-            print(f"🤔 Processing...")
-            
-            # Buffer for phrase detection - use smaller chunks for faster initial audio
-            text_buffer = ""
-            # Detect shorter phrase boundaries for faster TTS start
-            phrase_endings = [". ", "! ", "? ", ", ", ".\n", "!\n", "?\n"]
-            sentence_endings = [". ", "! ", "? ", ".\n", "!\n", "?\n"]
-            first_audio = True
-            min_phrase_length = 10  # Start TTS after at least 10 chars
-            
-            # Stream AI response and synthesize phrases in real-time
-            async for chunk in self.agent.think_stream(transcript):
-                text_buffer += chunk
-                
-                # Check if we have a complete phrase (prioritize sentences, then commas)
-                should_synthesize = False
-                phrase = ""
-                
-                # First check for sentence endings (higher priority)
-                for ending in sentence_endings:
-                    if ending in text_buffer and len(text_buffer) >= min_phrase_length:
-                        parts = text_buffer.split(ending, 1)
-                        phrase = parts[0] + ending.strip()
-                        text_buffer = parts[1] if len(parts) > 1 else ""
-                        should_synthesize = True
-                        break
-                
-                # If no sentence, check for phrase boundaries (commas) for faster start
-                if not should_synthesize and len(text_buffer) >= 30:  # Only for longer phrases
-                    for ending in [", "]:
-                        if ending in text_buffer:
-                            parts = text_buffer.split(ending, 1)
-                            phrase = parts[0] + ending
-                            text_buffer = parts[1] if len(parts) > 1 else ""
-                            should_synthesize = True
-                            break
-                
-                # Synthesize and play this phrase immediately
-                if should_synthesize and phrase.strip():
-                    if first_audio:
-                        print(f"🗣️ Speaking...")
-                        first_audio = False
-                    
-                    # Stream this phrase to TTS and play (connection already open)
-                    audio_stream = self.tts.synthesize_stream(phrase)
-                    await self.audio_playback.play_stream(audio_stream)
-            
-            # Handle any remaining text in buffer (incomplete sentence)
-            if text_buffer.strip():
-                audio_stream = self.tts.synthesize_stream(text_buffer)
-                await self.audio_playback.play_stream(audio_stream)
-            
-            print("✅ Response complete")
-            
+
             return True
-            
+
         except KeyboardInterrupt:
-            print("\n\n⚠️ Interrupted by user")
             return False
-        except Exception as e:
-            print(f"❌ Error processing query: {e}")
-            import traceback
-            traceback.print_exc()
+
+    async def process_query(self) -> bool:
+        print("\n👂 Listening...")
+
+        self.audio_capture.start()
+        stop_event = asyncio.Event()
+        audio_stream = self.audio_capture.stream(stop_event=stop_event)
+
+        try:
+            transcript = None
+            async for text in self.stt.transcribe_stream(audio_stream):
+                transcript = text
+                stop_event.set()
+                print(f"📝 You said: {text}")
+
+            self.audio_capture.stop()
+
+            if not transcript:
+                return True
+
+            # Smart sleep word detection - only sleep if it's clearly a goodbye
+            # Not if "thank you" is part of a longer sentence with a question
+            text_cleaned = self._clean_text(transcript)
+            text_lower = transcript.lower()
+            
+            # Check if the message is ONLY a sleep word (with minimal extra words)
+            # Split into sentences by period, question mark, exclamation
+            import re
+            sentences = re.split(r'[.!?]+', text_lower)
+            sentences = [s.strip() for s in sentences if s.strip()]
+            
+            # If there's only one short sentence and it contains a sleep word, go to sleep
+            if len(sentences) == 1 and len(text_cleaned.split()) <= 3:
+                if any(sleep_word in text_lower for sleep_word in self.sleep_words):
+                    self.is_awake = False
+                    await self._speak("Have a nice day. Say Hey Quanta when you need me.")
+                    return True
+            
+            # Also check if the last sentence is ONLY a goodbye (handles "answer. Thank you!")
+            if len(sentences) > 1:
+                last_sentence = sentences[-1].strip()
+                if any(sleep_word == last_sentence for sleep_word in self.sleep_words):
+                    self.is_awake = False
+                    await self._speak("Going to sleep. Say Hey Quanta when you need me.")
+                    return True
+
+            await self._stream_response(transcript)
             return True
-    
+
+        except KeyboardInterrupt:
+            return False
+
+    async def _stream_response(self, user_text: str):
+        if not self.tts._is_connected:
+            await self.tts.connect()
+        if not self.audio_playback._is_playing:
+            self.audio_playback.start()
+
+        buffer = ""
+        async for chunk in self.agent.think_stream(user_text):
+            buffer += chunk
+            if any(p in buffer for p in [". ", "? ", "! "]):
+                audio = self.tts.synthesize_stream(buffer)
+                await self.audio_playback.play_stream(audio)
+                buffer = ""
+
+        if buffer.strip():
+            audio = self.tts.synthesize_stream(buffer)
+            await self.audio_playback.play_stream(audio)
+
+    async def _speak(self, text: str):
+        if not self.tts._is_connected:
+            await self.tts.connect()
+        if not self.audio_playback._is_playing:
+            self.audio_playback.start()
+
+        audio = self.tts.synthesize_stream(text)
+        await self.audio_playback.play_stream(audio)
+
     async def run(self):
-        """Run the voice pipeline in a continuous loop."""
-        print("\n" + "="*60)
-        print("🤖 ROBOT VOICE PIPELINE STARTED")
-        print("="*60)
-        print("🎙️  Voice Activity Detection (VAD) enabled - speak naturally")
-        print("⚡ Real-time streaming: TTS starts while AI is thinking")
-        print("🛑 Say 'exit', 'quit', or 'stop' to end the session")
-        print("⌨️  Press Ctrl+C to force quit")
-        print("="*60)
-        
-        # Pre-connect to services for lower latency
-        print("🔗 Connecting to services...")
+        print("\n🤖 ROBOT VOICE PIPELINE STARTED")
+
         try:
             await self.tts.connect()
             self.audio_playback.start()
-            print("✅ Ready!")
         except Exception as e:
-            print(f"⚠️ Could not pre-connect: {e}")
-        
+            print(f"⚠️ Pre-connect failed: {e}")
+
         try:
-            # Main loop: listen → think → answer → repeat
             while True:
-                should_continue = await self.process_query()
-                
-                if not should_continue:
-                    break
-                
-                # Small pause between queries
-                await asyncio.sleep(0.3)
-        
-        except KeyboardInterrupt:
-            print("\n\n⚠️ Pipeline interrupted by user")
-        
+                if not self.is_awake:
+                    if not await self.listen_for_wake_word():
+                        break
+                else:
+                    if not await self.process_query():
+                        break
+
+                await asyncio.sleep(0.2)
+
         finally:
-            # Cleanup
             print("\n🧹 Cleaning up...")
             self.audio_capture.stop()
             self.audio_playback.stop()
             await self.stt.close()
             await self.tts.close()
-            print("✅ Pipeline stopped")
+            print("✅ Stopped")
 
 
 async def main():
-    """Main entry point."""
-    # Load environment variables
     load_dotenv()
-    
-    # Check required API keys
-    required_keys = ["ASSEMBLYAI_API_KEY", "CARTESIA_API_KEY", "OPENAI_API_KEY"]
-    missing_keys = [key for key in required_keys if not os.getenv(key)]
-    
-    if missing_keys:
-        print("❌ Missing required API keys:")
-        for key in missing_keys:
-            print(f"   - {key}")
-        print("\nPlease set these in your .env file or environment variables.")
+
+    required = ["ASSEMBLYAI_API_KEY", "CARTESIA_API_KEY", "OPENAI_API_KEY"]
+    missing = [k for k in required if not os.getenv(k)]
+
+    if missing:
+        print("❌ Missing API keys:")
+        for k in missing:
+            print(f" - {k}")
         sys.exit(1)
-    
-    # Create and run pipeline with PromptGenerator
+
     pipeline = RobotVoicePipeline()
-    
     await pipeline.run()
 
 
 if __name__ == "__main__":
-    # Run the async main function
     asyncio.run(main())
