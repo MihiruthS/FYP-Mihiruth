@@ -78,7 +78,7 @@ class SpeechToText:
             additional_headers={"Authorization": self.api_key}
         )
         self._is_connected = True
-        print("🔗 Connected to AssemblyAI STT")
+        print("Connected to AssemblyAI STT")
     
     async def send_audio(self, audio_chunk: bytes):
         """Send audio chunk to AssemblyAI for transcription."""
@@ -95,7 +95,7 @@ class SpeechToText:
                 # Send empty message or close frame to signal end
                 await self._ws.send(json.dumps({"terminate_session": True}))
             except Exception as e:
-                print(f"⚠️ Could not send termination: {e}")
+                print(f"Could not send termination: {e}")
     
     async def receive_transcript(self) -> Optional[str]:
         """
@@ -114,32 +114,32 @@ class SpeechToText:
             
             # Debug: print message type
             if message_type not in ["Begin"]:
-                print(f"🔍 STT message type: {message_type}")
+                print(f"STT message type: {message_type}")
             
             if message_type == "Turn":
                 transcript = message.get("transcript", "")
                 turn_is_formatted = message.get("turn_is_formatted", False)
                 
-                print(f"🔍 Turn received - formatted: {turn_is_formatted}, text: '{transcript}'")
+                print(f"Turn received - formatted: {turn_is_formatted}, text: '{transcript}'")
                 
                 if turn_is_formatted and transcript:
                     return transcript
             
             elif message_type == "Termination":
-                print("📝 AssemblyAI session terminated")
+                print("AssemblyAI session terminated")
                 return None
             
             elif "error" in message:
-                print(f"❌ AssemblyAI error: {message['error']}")
+                print(f"AssemblyAI error: {message['error']}")
                 return None
                 
         except json.JSONDecodeError as e:
-            print(f"❌ JSON decode error: {e}")
+            print(f"JSON decode error: {e}")
         except websockets.exceptions.ConnectionClosed as e:
-            print(f"❌ STT WebSocket connection closed: {e}")
+            print(f"STT WebSocket connection closed: {e}")
             self._is_connected = False
         except Exception as e:
-            print(f"❌ Unexpected error in receive_transcript: {e}")
+            print(f"Unexpected error in receive_transcript: {e}")
             import traceback
             traceback.print_exc()
         
@@ -169,11 +169,11 @@ class SpeechToText:
                 async for audio_chunk in audio_stream:
                     await self.send_audio(audio_chunk)
                     chunk_count += 1
-                print(f"📤 Sent {chunk_count} audio chunks to STT")
+                print(f"Sent {chunk_count} audio chunks to STT")
                 # Signal end of audio to AssemblyAI
                 await self.send_termination()
             except Exception as e:
-                print(f"❌ Error sending audio: {e}")
+                print(f"Error sending audio: {e}")
                 import traceback
                 traceback.print_exc()
             finally:
@@ -212,7 +212,7 @@ class SpeechToText:
                     timeout_counter += 1
                     if timeout_counter >= max_empty_receives:
                         if not received_any:
-                            print("⚠️ No transcripts received from STT")
+                            print("No transcripts received from STT")
                         break
                     
         finally:
@@ -236,7 +236,7 @@ class SpeechToText:
             finally:
                 self._ws = None
                 self._is_connected = False
-                print("🔌 Disconnected from AssemblyAI STT")
+                print("Disconnected from AssemblyAI STT")
     
     async def __aenter__(self):
         """Async context manager entry."""

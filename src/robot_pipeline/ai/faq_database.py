@@ -50,7 +50,7 @@ class FAQDatabase:
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
         if not self.api_key:
             # Don't raise error, just disable FAQ functionality
-            print("⚠️  OPENAI_API_KEY not found - FAQ database disabled")
+            print("OPENAI_API_KEY not found - FAQ database disabled")
             self.embeddings_model = None
             self.faqs = []
             return
@@ -75,33 +75,53 @@ class FAQDatabase:
         self._load_faqs()
         self._compute_embeddings()
         
-        print(f"✅ FAQ Database loaded with {len(self.faqs)} entries")
+        print(f"FAQ Database loaded with {len(self.faqs)} entries")
     
     def _load_faqs(self):
         """Load FAQs from JSON file."""
         if not self.faq_file.exists():
-            print(f"⚠️  FAQ file not found: {self.faq_file}")
+            print(f"FAQ file not found: {self.faq_file}")
             print("   Creating default FAQ file...")
             self._create_default_faq_file()
+        
+        # Check for cached embeddings file
+        cache_file = self.faq_file.with_suffix('.embeddings.npy')
+        embeddings_cache = None
+        
+        try:
+            if cache_file.exists():
+                # Load cached embeddings
+                embeddings_cache = np.load(cache_file, allow_pickle=True).item()
+                print(f"Loaded cached FAQ embeddings from {cache_file.name}")
+        except Exception as e:
+            print(f"Could not load embeddings cache: {e}")
+            embeddings_cache = None
         
         try:
             with open(self.faq_file, 'r', encoding='utf-8') as f:
                 faq_data = json.load(f)
             
-            print(f"📚 Loaded {len(faq_data)} FAQs from {self.faq_file.name}")
+            print(f"Loaded {len(faq_data)} FAQs from {self.faq_file.name}")
             
             # Convert to FAQItem objects
             for item in faq_data:
-                self.faqs.append(FAQItem(
-                    question=item["question"],
+                question = item["question"]
+                faq = FAQItem(
+                    question=question,
                     answer=item["answer"],
                     category=item.get("category", "general"),
                     keywords=item.get("keywords", [])
-                ))
+                )
+                
+                # Use cached embedding if available
+                if embeddings_cache and question in embeddings_cache:
+                    faq.embedding = embeddings_cache[question]
+                
+                self.faqs.append(faq)
         except json.JSONDecodeError as e:
-            print(f"❌ Error parsing FAQ file: {e}")
+            print(f"Error parsing FAQ file: {e}")
         except Exception as e:
-            print(f"❌ Error loading FAQs: {e}")
+            print(f"Error loading FAQs: {e}")
     
     def _create_default_faq_file(self):
         """Create default FAQ file if it doesn't exist."""
@@ -127,19 +147,43 @@ class FAQDatabase:
         with open(self.faq_file, 'w', encoding='utf-8') as f:
             json.dump(default_faqs, f, indent=4, ensure_ascii=False)
         
-        print(f"✅ Created default FAQ file: {self.faq_file}")
+        print(f"Created default FAQ file: {self.faq_file}")
     
     def _compute_embeddings(self):
         """Compute embeddings for all FAQ questions."""
-        print("🔄 Computing FAQ embeddings...")
+        # Check if any FAQs need embeddings computed
+        needs_computation = [faq for faq in self.faqs if faq.embedding is None]
         
-        questions = [faq.question for faq in self.faqs]
-        embeddings = self.embeddings_model.embed_documents(questions)
+        if not needs_computation:
+            print(f"All {len(self.faqs)} FAQ embeddings loaded from cache")
+            return
         
-        for i, faq in enumerate(self.faqs):
+        print(f"Computing embeddings for {len(needs_computation)} new FAQs...")
+        
+        questions_to_compute = [faq.question for faq in needs_computation]
+        embeddings = self.embeddings_model.embed_documents(questions_to_compute)
+        
+        for i, faq in enumerate(needs_computation):
             faq.embedding = np.array(embeddings[i])
         
-        print(f"✅ Computed {len(embeddings)} FAQ embeddings")
+        # Save all embeddings to cache for next time
+        self._save_embeddings_cache()
+        
+        print(f"Computed and cached {len(embeddings)} FAQ embeddings")
+    
+    def _save_embeddings_cache(self):
+        """Save computed embeddings to cache file."""
+        try:
+            cache_file = self.faq_file.with_suffix('.embeddings.npy')
+            embeddings_dict = {
+                faq.question: faq.embedding 
+                for faq in self.faqs 
+                if faq.embedding is not None
+            }
+            np.save(cache_file, embeddings_dict, allow_pickle=True)
+            print(f"Saved {len(embeddings_dict)} embeddings to cache")
+        except Exception as e:
+            print(f"Could not save embeddings cache: {e}")
     
     def _cosine_similarity(self, vec1: np.ndarray, vec2: np.ndarray) -> float:
         """Calculate cosine similarity between two vectors."""
@@ -193,7 +237,7 @@ class FAQDatabase:
         
         # Return if above threshold
         if best_score >= self.similarity_threshold:
-            print(f"✨ FAQ Match! Score: {best_score:.3f}, Question: '{best_question}'")
+            print(f"FAQ Match! Score: {best_score:.3f}, Question: '{best_question}'")
             return (best_match, best_score, best_question)
         
         return None
@@ -231,7 +275,7 @@ class FAQDatabase:
             embedding=embedding
         )
         self.faqs.append(faq)
-        print(f"➕ Added FAQ: '{question}'")
+        print(f"Added FAQ: '{question}'")
     
     def get_stats(self) -> Dict[str, any]:
         """Get FAQ database statistics."""

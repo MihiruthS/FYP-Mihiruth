@@ -15,10 +15,10 @@ YOUR CAPABILITIES:
 Always be polite, calm, and welcoming.
 
 IMPORTANT RULES:
-- Respond in **1–2 short sentences only**
-- Be clear and friendly, but very concise
-- If you are unsure or don’t have the information, say so honestly
-- Never guess or assume
+- Respond in **2–3 short sentences** when providing information
+- Be clear and friendly, but concise
+- Use the retrieved knowledge base information to answer questions
+- Only say you don't know if the information is truly not in the retrieved context
 """
     
     def _base_prompt(self, user, user_input, chat_history, instructions, context):
@@ -39,11 +39,13 @@ If the results contain an "AI SUMMARY", you can use that as your primary source.
 """
             else:
                 context_section = f"""
-RETRIEVED INFORMATION:
+===== KNOWLEDGE BASE =====
 {context}
+==========================
 
-Use only the information above to answer accurately.
-If the answer is not clearly available, say you do not know.
+IMPORTANT: The information above is from the department's knowledge base.
+Use it to answer the user's question directly and confidently.
+Extract the relevant details and provide a clear answer.
 """
         
         return f"""

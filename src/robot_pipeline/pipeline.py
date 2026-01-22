@@ -47,16 +47,16 @@ class RobotVoicePipeline:
 
         self.prompt_generator = PromptGenerator()
 
-        print("⚡ Initializing FAQ Database...")
+        print("Initializing FAQ Database...")
         try:
             self.faq_database = FAQDatabase()
             stats = self.faq_database.get_stats()
-            print(f"✅ FAQ Database ready with {stats['total_faqs']} questions")
+            print(f"FAQ Database ready with {stats['total_faqs']} questions")
         except Exception as e:
-            print(f"⚠️ FAQ Database failed: {e}")
+            print(f"FAQ Database failed: {e}")
             self.faq_database = None
 
-        print("🔍 Initializing RAG Database...")
+        print("Initializing RAG Database...")
         self.rag_database = RAGDatabase(
             persist_directory=str(PROJECT_ROOT / "data" / "chroma_db"),
             documents_directory=str(PROJECT_ROOT / "src" / "knowledge_base" / "documents")
@@ -75,7 +75,7 @@ class RobotVoicePipeline:
             use_faq=True
         )
 
-        print("🤖 Robot Voice Pipeline Initialized")
+        print("Robot Voice Pipeline Initialized")
 
     def _clean_text(self, text: str) -> str:
         """Remove punctuation and normalize text for matching."""
@@ -86,7 +86,7 @@ class RobotVoicePipeline:
         return text
 
     async def listen_for_wake_word(self) -> bool:
-        print("\n😴 Sleeping... Say 'Hey Quanta'")
+        print("\nSleeping... Say 'Hey Quanta'")
 
         self.audio_capture.start()
         stop_event = asyncio.Event()
@@ -97,7 +97,7 @@ class RobotVoicePipeline:
             async for text in self.stt.transcribe_stream(audio_stream):
                 transcript = text
                 stop_event.set()
-                print(f"📝 Heard: {text}")
+                print(f"Heard: {text}")
 
             self.audio_capture.stop()
 
@@ -122,7 +122,7 @@ class RobotVoicePipeline:
             return False
 
     async def process_query(self) -> bool:
-        print("\n👂 Listening...")
+        print("\nListening...")
 
         self.audio_capture.start()
         stop_event = asyncio.Event()
@@ -133,7 +133,7 @@ class RobotVoicePipeline:
             async for text in self.stt.transcribe_stream(audio_stream):
                 transcript = text
                 stop_event.set()
-                print(f"📝 You said: {text}")
+                print(f"You said: {text}")
 
             self.audio_capture.stop()
 
@@ -216,13 +216,13 @@ class RobotVoicePipeline:
         await self.audio_playback.play_stream(audio)
 
     async def run(self):
-        print("\n🤖 ROBOT VOICE PIPELINE STARTED")
+        print("\nROBOT VOICE PIPELINE STARTED")
 
         try:
             await self.tts.connect()
             self.audio_playback.start()
         except Exception as e:
-            print(f"⚠️ Pre-connect failed: {e}")
+            print(f"Pre-connect failed: {e}")
 
         try:
             while True:
@@ -236,12 +236,12 @@ class RobotVoicePipeline:
                 await asyncio.sleep(0.2)
 
         finally:
-            print("\n🧹 Cleaning up...")
+            print("\nCleaning up...")
             self.audio_capture.stop()
             self.audio_playback.stop()
             await self.stt.close()
             await self.tts.close()
-            print("✅ Stopped")
+            print("Stopped")
 
 
 async def main():
@@ -251,7 +251,7 @@ async def main():
     missing = [k for k in required if not os.getenv(k)]
 
     if missing:
-        print("❌ Missing API keys:")
+        print("Missing API keys:")
         for k in missing:
             print(f" - {k}")
         sys.exit(1)

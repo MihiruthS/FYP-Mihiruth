@@ -37,7 +37,7 @@ class WebSearch:
             Formatted search results as a string
         """
         try:
-            print(f"🌐 Searching web with Tavily: '{query}'")
+            print(f"Searching web with Tavily: '{query}'")
             
             # Perform search with Tavily
             response = self.client.search(
@@ -50,14 +50,14 @@ class WebSearch:
             
             # Check if we have results
             if not response or 'results' not in response:
-                print("⚠️ No web results found")
+                print("No web results found")
                 return ""
             
             results = response.get('results', [])
             answer = response.get('answer', '')
             
             if not results:
-                print("⚠️ No web results found")
+                print("No web results found")
                 return ""
             
             # Format results into context
@@ -81,16 +81,16 @@ class WebSearch:
                 context_parts.append(result_text)
             
             context = "WEB SEARCH RESULTS:\n" + "\n---\n".join(context_parts)
-            print(f"✅ Found {len(results)} web results")
+            print(f"Found {len(results)} web results")
             
             # Debug: show summary
             if answer:
-                print(f"💡 Tavily summary: {answer[:80]}...")
+                print(f"Tavily summary: {answer[:80]}...")
             
             return context
             
         except Exception as e:
-            print(f"⚠️ Web search failed: {e}")
+            print(f"Web search failed: {e}")
             return ""
     
     def needs_web_search(self, query: str) -> bool:

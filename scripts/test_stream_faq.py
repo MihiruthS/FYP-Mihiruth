@@ -33,11 +33,11 @@ async def test_stream():
     ]
     
     for q in questions:
-        print(f"\n❓ Question: {q}")
+        print(f"\nQuestion: {q}")
         response = ""
         async for chunk in pipeline.agent.think_stream(q):
             response += chunk
-        print(f"✅ Response: {response[:100]}...")
+        print(f"Response: {response[:100]}...")
     
     print("\n" + "="*60)
     print("Test Complete")

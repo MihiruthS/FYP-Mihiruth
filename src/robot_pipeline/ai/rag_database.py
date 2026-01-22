@@ -73,13 +73,13 @@ class RAGDatabase:
             # Check if database has documents
             collection = self.vector_store._collection
             if collection.count() == 0:
-                print("📦 Empty vector database detected. Loading documents...")
+                print("Empty vector database detected. Loading documents...")
                 self.load_documents()
             else:
-                print(f"✅ Loaded existing vector database with {collection.count()} chunks")
+                print(f"Loaded existing vector database with {collection.count()} chunks")
                 
         except Exception as e:
-            print(f"⚠️  Creating new vector database: {e}")
+            print(f"Creating new vector database: {e}")
             # Create new database
             if self.documents_directory:
                 self.load_documents()
@@ -91,21 +91,21 @@ class RAGDatabase:
         Reads all .txt files, splits them into chunks, and stores in ChromaDB.
         """
         if not self.documents_directory:
-            print("❌ No documents directory specified")
+            print("No documents directory specified")
             return
         
         docs_path = Path(self.documents_directory)
         if not docs_path.exists():
-            print(f"❌ Documents directory not found: {self.documents_directory}")
+            print(f"Documents directory not found: {self.documents_directory}")
             return
         
         # Find all .txt files
         txt_files = list(docs_path.glob("*.txt"))
         if not txt_files:
-            print(f"❌ No .txt files found in {self.documents_directory}")
+            print(f"No .txt files found in {self.documents_directory}")
             return
         
-        print(f"📚 Found {len(txt_files)} documents to index...")
+        print(f"Found {len(txt_files)} documents to index...")
         
         # Load documents
         documents = []
@@ -122,12 +122,12 @@ class RAGDatabase:
                     }
                 )
                 documents.append(doc)
-                print(f"  ✓ Loaded: {file_path.name}")
+                print(f"  Loaded: {file_path.name}")
             except Exception as e:
-                print(f"  ✗ Error loading {file_path.name}: {e}")
+                print(f"  Error loading {file_path.name}: {e}")
         
         if not documents:
-            print("❌ No documents loaded")
+            print("No documents loaded")
             return
         
         # Split documents into chunks
@@ -139,7 +139,7 @@ class RAGDatabase:
         )
         
         split_docs = text_splitter.split_documents(documents)
-        print(f"✂️  Split into {len(split_docs)} chunks")
+        print(f"Split into {len(split_docs)} chunks")
         
         # Create vector store
         self.vector_store = Chroma.from_documents(
@@ -149,7 +149,7 @@ class RAGDatabase:
             collection_name="knowledge_base"
         )
         
-        print(f"✅ Indexed {len(split_docs)} chunks into vector database")
+        print(f"Indexed {len(split_docs)} chunks into vector database")
     
     def retrieve(
         self,
@@ -169,7 +169,7 @@ class RAGDatabase:
             List of relevant documents with metadata
         """
         if not self.vector_store:
-            print("⚠️  Vector store not initialized")
+            print("Vector store not initialized")
             return []
         
         try:
@@ -183,12 +183,12 @@ class RAGDatabase:
             # ChromaDB uses L2 distance, so we'll filter differently
             filtered_docs = [doc for doc, score in results]
             
-            print(f"🔍 Retrieved {len(filtered_docs)} relevant chunks for query: '{query[:50]}...'")
+            print(f"Retrieved {len(filtered_docs)} relevant chunks for query: '{query[:50]}...'")
             
             return filtered_docs
             
         except Exception as e:
-            print(f"❌ Error retrieving documents: {e}")
+            print(f"Error retrieving documents: {e}")
             return []
     
     def get_context_string(
@@ -224,8 +224,15 @@ class RAGDatabase:
             # Add document with source
             doc_text = f"[Source: {source}]\n{content}\n"
             
-            # Check length limit
-            if total_length + len(doc_text) > max_length:
+            # Check length limit - if first document is too long, truncate it
+            if i == 1 and len(doc_text) > max_length:
+                # Include at least the first document, but truncate
+                doc_text = doc_text[:max_length] + "...[truncated]"
+                context_parts.append(doc_text)
+                total_length = max_length
+                break
+            elif total_length + len(doc_text) > max_length:
+                # Skip this document if it would exceed limit
                 break
             
             context_parts.append(doc_text)
@@ -242,10 +249,10 @@ class RAGDatabase:
             try:
                 # Delete collection and recreate
                 self.vector_store._client.delete_collection("knowledge_base")
-                print("🗑️  Vector database cleared")
+                print("Vector database cleared")
                 self._initialize_vector_store()
             except Exception as e:
-                print(f"❌ Error clearing database: {e}")
+                print(f"Error clearing database: {e}")
     
     def get_stats(self) -> dict:
         """Get statistics about the database."""

@@ -14,7 +14,7 @@ print("Testing Pipeline Initialization")
 print("="*60)
 
 # Test FAQ first
-print("\n1️⃣ Testing FAQ Database directly:")
+print("\n1. Testing FAQ Database directly:")
 from robot_pipeline.ai.faq_database import FAQDatabase
 faq = FAQDatabase()
 print(f"   FAQ object: {faq}")
@@ -22,7 +22,7 @@ print(f"   Has FAQs: {len(faq.faqs) if faq.faqs else 0}")
 print(f"   Embeddings model: {faq.embeddings_model}")
 
 # Test pipeline
-print("\n2️⃣ Testing Pipeline Initialization:")
+print("\n2. Testing Pipeline Initialization:")
 from robot_pipeline.pipeline import RobotVoicePipeline
 
 # Patch to see what happens
@@ -38,7 +38,7 @@ class TestPipeline(RobotVoicePipeline):
 
 pipeline = TestPipeline()
 
-print("\n3️⃣ Testing FAQ query through agent:")
+print("\n3. Testing FAQ query through agent:")
 import asyncio
 async def test():
     response = await pipeline.agent.think("Who is the head of the department?")

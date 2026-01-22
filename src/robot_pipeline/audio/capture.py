@@ -69,7 +69,7 @@ class AudioCapture:
         self._is_recording = True
         self._stream.start_stream()
 
-        print(f"🎤 Microphone started (16kHz, mono, PCM16)")
+        print(f"Microphone started (16kHz, mono, PCM16)")
 
     def stop(self):
         """Stop capturing audio."""
@@ -87,7 +87,7 @@ class AudioCapture:
             self._audio.terminate()
             self._audio = None
 
-        print("🎤 Microphone stopped")
+        print("Microphone stopped")
 
     def _audio_callback(self, in_data, frame_count, time_info, status):
         if not self._is_recording or not self._audio_queue:

@@ -32,7 +32,7 @@ class TextToSpeech:
         sample_rate: int = 24000,
         encoding: str = "pcm_s16le",
         language: str = "en",
-        speed: str = "slow",  # Speech speed: "slowest", "slow", "normal", "fast", "fastest"
+        speed: str = "normal",  # Changed from "slow" to "normal" for faster responses
     ):
         """
         Initialize the TTS client.
@@ -44,7 +44,7 @@ class TextToSpeech:
             sample_rate: Audio sample rate in Hz (default: 24000)
             encoding: Audio encoding format (default: pcm_s16le)
             language: Language code (default: en)
-            speed: Speech speed multiplier (0.5-2.0, default 0.85 for slower/clearer speech)
+            speed: Speech speed - "slowest", "slow", "normal", "fast", "fastest" (default: normal)
         """
         self.api_key = api_key or os.getenv("CARTESIA_API_KEY")
         if not self.api_key:
@@ -80,7 +80,7 @@ class TextToSpeech:
         
         self._ws = await websockets.connect(url)
         self._is_connected = True
-        print("🔗 Connected to Cartesia TTS")
+        print("Connected to Cartesia TTS")
     
     async def synthesize(self, text: str) -> bytes:
         """
@@ -98,7 +98,7 @@ class TextToSpeech:
         if not self._is_connected or not self._ws:
             await self.connect()
         
-        print(f"🗣️ Synthesizing: '{text[:50]}...'")
+        print(f"Synthesizing: '{text[:50]}...'")
         
         # Send synthesis request - try speed at voice level
         voice_config = {
@@ -145,19 +145,19 @@ class TextToSpeech:
                     
                     # Check for errors
                     if "error" in message and message["error"]:
-                        print(f"❌ Cartesia error: {message['error']}")
+                        print(f"Cartesia error: {message['error']}")
                         break
                         
                 except json.JSONDecodeError as e:
-                    print(f"❌ JSON decode error: {e}")
+                    print(f"JSON decode error: {e}")
                     continue
                     
         except websockets.exceptions.ConnectionClosed:
-            print("❌ TTS WebSocket connection closed")
+            print("TTS WebSocket connection closed")
             self._is_connected = False
             return b""
         
-        print(f"✅ Synthesized {len(audio_data)} bytes of audio")
+        print(f"Synthesized {len(audio_data)} bytes of audio")
         return audio_data
     
     async def synthesize_stream(self, text: str) -> AsyncIterator[bytes]:
@@ -176,7 +176,7 @@ class TextToSpeech:
         if not self._is_connected or not self._ws:
             await self.connect()
         
-        print(f"🗣️ Synthesizing (streaming): '{text[:50]}...'")
+        print(f"Synthesizing (streaming): '{text[:50]}...'")
         
         # Send synthesis request
         # Try multiple approaches for speed control
@@ -222,15 +222,15 @@ class TextToSpeech:
                     
                     # Check for errors
                     if "error" in message and message["error"]:
-                        print(f"❌ Cartesia error: {message['error']}")
+                        print(f"Cartesia error: {message['error']}")
                         break
                         
                 except json.JSONDecodeError as e:
-                    print(f"❌ JSON decode error: {e}")
+                    print(f"JSON decode error: {e}")
                     continue
                     
         except websockets.exceptions.ConnectionClosed:
-            print("❌ TTS WebSocket connection closed")
+            print("TTS WebSocket connection closed")
             self._is_connected = False
     
     async def close(self):
@@ -243,7 +243,7 @@ class TextToSpeech:
             finally:
                 self._ws = None
                 self._is_connected = False
-                print("🔌 Disconnected from Cartesia TTS")
+                print("Disconnected from Cartesia TTS")
     
     async def __aenter__(self):
         """Async context manager entry."""

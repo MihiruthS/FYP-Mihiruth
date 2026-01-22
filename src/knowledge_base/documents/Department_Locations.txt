@@ -2,7 +2,7 @@ The analog electronic laboratory is on the second floor. Once you reach to the s
 The computer laboratory is on the first floor. Once you reach to the first floor you can see the computer laboratory on your lefthand side.
 The digital electronic laboratory is on the second floor. Once you reach to the second floor through the elevator, turn left and go towards the end of the passage. Then you can see the digital electronic laboratory in front of you.
 The telecommunication (Telecom) laboratory is on the third floor. Once you reach to the third floor go through the elevator, turn left and go towards the end of the passage. Then you can see the communication laboratory infront of you.
-The electronic workshop is on the second floor. Once you reach to the second floor through the elevator, turn right and go towards the end of the passage. Then you can see the electronic workshop on your lefthand side.
+The electronic workshop is on the second floor. Once you reach to the second floor through the elevator, turn left and go towards the end of the passage. Then you can see the electronic workshop on your lefthand side.
 The soldering room is on the second floor. Once you reach to the second floor through the elevator, the soldering room is right infront of you
 The PG seminar room is on the third floor. Once you reach to the third floor through the elevator, the PG seminar room is to the right of you.
 The radio room is on the roof top of the building.

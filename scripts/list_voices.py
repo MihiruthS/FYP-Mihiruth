@@ -20,12 +20,12 @@ def list_voices():
     """Fetch and display all available Cartesia voices."""
     api_key = os.getenv("CARTESIA_API_KEY")
     if not api_key:
-        print("❌ CARTESIA_API_KEY not found in environment variables")
+        print("CARTESIA_API_KEY not found in environment variables")
         return
     
     url = "https://api.cartesia.ai/voices"
     
-    print("🔍 Fetching available Cartesia voices...\n")
+    print("Fetching available Cartesia voices...\n")
     
     try:
         req = urllib.request.Request(url)
@@ -36,7 +36,7 @@ def list_voices():
             if response.status == 200:
                 voices = json.loads(response.read().decode('utf-8'))
                 
-                print(f"✅ Found {len(voices)} voices:\n")
+                print(f"Found {len(voices)} voices:\n")
                 print("="*80)
                 
                 for voice in voices:
@@ -53,7 +53,7 @@ def list_voices():
                     print("-"*80)
                     
                 # Highlight current voice being used
-                print("\n🎯 CURRENTLY USED IN PIPELINE:")
+                print("\nCURRENTLY USED IN PIPELINE:")
                 print("Voice ID: f6ff7c0c-e396-40a9-a70b-f7607edb6937")
                 current_voice = next(
                     (v for v in voices if v.get("id") == "f6ff7c0c-e396-40a9-a70b-f7607edb6937"), 
@@ -64,10 +64,10 @@ def list_voices():
                     print(f"Description: {current_voice.get('description', 'N/A')}")
                 
             else:
-                print(f"❌ Error: API returned status code {response.status}")
+                print(f"Error: API returned status code {response.status}")
                 
     except Exception as e:
-        print(f"❌ Error fetching voices: {e}")
+        print(f"Error fetching voices: {e}")
         import traceback
         traceback.print_exc()
 

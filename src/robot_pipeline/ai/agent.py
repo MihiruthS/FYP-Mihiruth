@@ -6,6 +6,7 @@ Integrates RAG (Retrieval-Augmented Generation) for knowledge-based responses.
 """
 
 import os
+import random
 from typing import Optional
 from collections import OrderedDict
 
@@ -74,9 +75,9 @@ class AIAgent:
         self.llm = ChatOpenAI(
             model=model,
             api_key=self.api_key,
-            temperature=0.2,  # Even lower for faster, more focused responses
+            temperature=0.1,  # Even lower for faster, more focused responses
             streaming=True,  # Enable streaming for real-time responses
-            max_tokens=80,  # Limit response length for speed (1-2 sentences)
+            max_tokens=100,  # Increased from 60 - allows 2-3 sentences with details
         )
         
         self.prompt_generator = prompt_generator
@@ -92,23 +93,23 @@ class AIAgent:
             try:
                 self.web_search = WebSearch()
             except Exception as e:
-                print(f"⚠️ Web search initialization failed: {e}")
+                print(f"Web search initialization failed: {e}")
                 self.use_web_search = False
         
         self.conversation_history = []
         
-        # Simple LRU cache for RAG contexts (speeds up repeated queries)
+        # Enhanced LRU cache for RAG contexts (speeds up repeated queries)
         self._rag_cache = OrderedDict()
-        self._max_cache_size = 20
+        self._max_cache_size = 100  # Increased from 20 for better hit rate
         
         if self.use_faq:
-            print("⚡ FAQ enabled - Fast responses for common questions")
+            print("FAQ enabled - Fast responses for common questions")
         if self.use_rag:
-            print("🔍 RAG enabled - AI will use knowledge base for responses")
+            print("RAG enabled - AI will use knowledge base for responses")
         else:
-            print("💭 RAG disabled - AI will use only training knowledge")
+            print("RAG disabled - AI will use only training knowledge")
         if self.use_web_search:
-            print("🌐 Web search enabled (Tavily) - Can answer current events")
+            print("Web search enabled (Tavily) - Can answer current events")
         
         # Department-related keywords for smart RAG filtering
         self.department_keywords = [
@@ -146,13 +147,22 @@ class AIAgent:
         # Default to using RAG for anything that might be department-related
         return True
     
+    def _normalize_query(self, query: str) -> str:
+        """Normalize query for better cache hits."""
+        import string
+        # Remove punctuation, extra whitespace, convert to lowercase
+        query = query.lower().strip()
+        query = query.translate(str.maketrans('', '', string.punctuation))
+        query = ' '.join(query.split())  # Normalize whitespace
+        return query
+    
     def _build_system_prompt(self, user_input: str, skip_rag: bool = False, web_context: str = "") -> str:
         """Build dynamic system prompt using PromptGenerator, RAG context, and web search."""
         # Retrieve relevant context from RAG if enabled
         rag_context = ""
         if not skip_rag and self.use_rag and self.rag_database:
-            # Check cache first
-            cache_key = user_input.lower().strip()
+            # Check cache first with normalized query
+            cache_key = self._normalize_query(user_input)
             if cache_key in self._rag_cache:
                 rag_context = self._rag_cache[cache_key]
                 # Move to end (most recently used)
@@ -161,8 +171,8 @@ class AIAgent:
                 # Retrieve from RAG
                 rag_context = self.rag_database.get_context_string(
                     query=user_input,
-                    k=3,  # Retrieve top 3 relevant chunks (faster)
-                    max_length=1200  # Limit context length (faster processing)
+                    k=3,  # Retrieve top 2 relevant chunks (faster, sufficient for most queries)
+                    max_length=1500  # Increased from 800 to fit 2 full chunks
                 )
                 
                 # Cache the result
@@ -183,7 +193,7 @@ class AIAgent:
         if self.prompt_generator:
             # Build chat history string
             chat_history = ""
-            for msg in self.conversation_history[-4:]:  # Last 2 exchanges (faster)
+            for msg in self.conversation_history[-2:]:  # Reduced from 4 to 2 (last exchange only)
                 if isinstance(msg, HumanMessage):
                     chat_history += f"User: {msg.content}\n"
                 else:
@@ -222,15 +232,15 @@ converted to speech."""
         if self.use_faq and self.faq_database:
             faq_answer = self.faq_database.get_answer(user_input)
             if faq_answer:
-                print(f"⚡ FAQ Hit! Instant response")
+                print(f"FAQ Hit! Instant response")
                 # Update conversation history
                 self.conversation_history.append(HumanMessage(content=user_input))
                 from langchain_core.messages import AIMessage
                 self.conversation_history.append(AIMessage(content=faq_answer))
                 
                 # Keep history manageable
-                if len(self.conversation_history) > 10:
-                    self.conversation_history = self.conversation_history[-10:]
+                if len(self.conversation_history) > 6:
+                    self.conversation_history = self.conversation_history[-6:]
                 
                 return faq_answer
         
@@ -238,13 +248,13 @@ converted to speech."""
         web_context = ""
         if self.use_web_search and self.web_search:
             if self.web_search.needs_web_search(user_input):
-                web_context = self.web_search.search(user_input, max_results=2)
+                web_context = self.web_search.search(user_input, max_results=1)  # Reduced from 2 for speed
         
         # Step 3: Check if query needs department knowledge
         needs_rag = self._needs_department_knowledge(user_input)
         
         if not needs_rag and not web_context:
-            print(f"⚡ Simple query detected - Skipping RAG for faster response")
+            print(f"Simple query detected - Skipping RAG for faster response")
         
         # Step 4: Build system prompt (with RAG and/or web search)
         system_prompt = self._build_system_prompt(user_input, skip_rag=not needs_rag, web_context=web_context)
@@ -259,7 +269,7 @@ converted to speech."""
         messages.append(HumanMessage(content=user_input))
         
         # Get response from LLM
-        print(f"🤔 Thinking about: '{user_input}'")
+        print(f"Thinking about: '{user_input}'")
         
         try:
             response = await self.llm.ainvoke(messages)
@@ -269,15 +279,15 @@ converted to speech."""
             self.conversation_history.append(HumanMessage(content=user_input))
             self.conversation_history.append(response)
             
-            # Keep conversation history manageable (last 10 messages)
-            if len(self.conversation_history) > 10:
-                self.conversation_history = self.conversation_history[-10:]
+            # Keep conversation history manageable (last 6 messages = 3 exchanges)
+            if len(self.conversation_history) > 6:
+                self.conversation_history = self.conversation_history[-6:]
             
-            print(f"💡 Response: '{response_text}'")
+            print(f"Response: '{response_text}'")
             return response_text
             
         except Exception as e:
-            print(f"❌ Error generating response: {e}")
+            print(f"Error generating response: {e}")
             return "I'm sorry, I encountered an error processing your request."
     
     async def think_stream(self, user_input: str):
@@ -295,15 +305,15 @@ converted to speech."""
         if self.use_faq and self.faq_database:
             faq_answer = self.faq_database.get_answer(user_input)
             if faq_answer:
-                print(f"⚡ FAQ Hit! Instant response")
+                print(f"FAQ Hit! Instant response")
                 # Update conversation history
                 self.conversation_history.append(HumanMessage(content=user_input))
                 from langchain_core.messages import AIMessage
                 self.conversation_history.append(AIMessage(content=faq_answer))
                 
                 # Keep history manageable
-                if len(self.conversation_history) > 10:
-                    self.conversation_history = self.conversation_history[-10:]
+                if len(self.conversation_history) > 6:
+                    self.conversation_history = self.conversation_history[-6:]
                 
                 yield faq_answer
                 return
@@ -312,13 +322,22 @@ converted to speech."""
         web_context = ""
         if self.use_web_search and self.web_search:
             if self.web_search.needs_web_search(user_input):
-                web_context = self.web_search.search(user_input, max_results=2)
+                # Yield random filler message while searching
+                filler_messages = [
+                    "Mmm, let me search the internet for that. ",
+                    "Let me look that up online for you. ",
+                    "Give me a moment, I'll search the web. ",
+                    "Let me check the internet real quick. ",
+                    "Hold on, searching the web for you. "
+                ]
+                yield random.choice(filler_messages)
+                web_context = self.web_search.search(user_input, max_results=1)  # Reduced from 2 for speed
         
         # Step 3: Check if query needs department knowledge
         needs_rag = self._needs_department_knowledge(user_input)
         
         if not needs_rag and not web_context:
-            print(f"⚡ Simple query detected - Skipping RAG for faster response")
+            print(f"Simple query detected - Skipping RAG for faster response")
         
         # Step 4: Build system prompt (with RAG and/or web search)
         system_prompt = self._build_system_prompt(user_input, skip_rag=not needs_rag, web_context=web_context)
@@ -328,7 +347,7 @@ converted to speech."""
         messages.extend(self.conversation_history)
         messages.append(HumanMessage(content=user_input))
         
-        print(f"🤔 Thinking about: '{user_input}'")
+        print(f"Thinking about: '{user_input}'")
         
         try:
             full_response = ""
@@ -345,21 +364,21 @@ converted to speech."""
             self.conversation_history.append(AIMessage(content=full_response))
             
             # Keep history manageable
-            if len(self.conversation_history) > 10:
-                self.conversation_history = self.conversation_history[-10:]
+            if len(self.conversation_history) > 6:
+                self.conversation_history = self.conversation_history[-6:]
             
-            print(f"💡 Response: '{full_response}'")
+            print(f"Response: '{full_response}'")
             
         except Exception as e:
-            print(f"❌ Error generating response: {e}")
+            print(f"Error generating response: {e}")
             yield "I'm sorry, I encountered an error processing your request."
     
     def clear_history(self):
         """Clear the conversation history."""
         self.conversation_history = []
-        print("🧹 Conversation history cleared")
+        print("Conversation history cleared")
     
     def set_system_prompt(self, prompt: str):
         """Update the system prompt."""
         self.system_prompt = prompt
-        print("📝 System prompt updated")
+        print("System prompt updated")

@@ -22,17 +22,17 @@ from robot_pipeline.ai.prompts import PromptGenerator
 def test_faq_database():
     """Test FAQ database directly."""
     print("=" * 60)
-    print("🧪 Testing FAQ Database")
+    print("Testing FAQ Database")
     print("=" * 60)
     
     # Initialize FAQ database
-    print("\n1️⃣ Initializing FAQ Database...")
+    print("\n1. Initializing FAQ Database...")
     faq = FAQDatabase()
     
     stats = faq.get_stats()
-    print(f"   ✓ Loaded {stats['total_faqs']} FAQs")
-    print(f"   ✓ Categories: {list(stats['categories'].keys())}")
-    print(f"   ✓ Threshold: {stats['threshold']}")
+    print(f"   Loaded {stats['total_faqs']} FAQs")
+    print(f"   Categories: {list(stats['categories'].keys())}")
+    print(f"   Threshold: {stats['threshold']}")
     
     # Test queries
     test_queries = [
@@ -52,39 +52,39 @@ def test_faq_database():
         "This is a completely random question that won't match",  # Should not match
     ]
     
-    print("\n2️⃣ Testing FAQ Matches...")
+    print("\n2. Testing FAQ Matches...")
     print("=" * 60)
     
     matches = 0
     no_matches = 0
     
     for query in test_queries:
-        print(f"\n📝 Query: \"{query}\"")
+        print(f"\nQuery: \"{query}\"")
         result = faq.search(query)
         
         if result:
             answer, score, matched_question = result
             matches += 1
-            print(f"   ✅ MATCH (score: {score:.3f})")
+            print(f"   MATCH (score: {score:.3f})")
             print(f"   Matched: \"{matched_question}\"")
             print(f"   Answer: \"{answer}\"")
         else:
             no_matches += 1
-            print(f"   ❌ NO MATCH (below threshold)")
+            print(f"   NO MATCH (below threshold)")
     
     print("\n" + "=" * 60)
-    print(f"📊 Results: {matches} matches, {no_matches} no matches")
+    print(f"Results: {matches} matches, {no_matches} no matches")
     print("=" * 60)
 
 
 async def test_faq_integration():
     """Test FAQ integration with AI agent."""
     print("\n\n" + "=" * 60)
-    print("🧪 Testing FAQ + AI Agent Integration")
+    print("Testing FAQ + AI Agent Integration")
     print("=" * 60)
     
     # Initialize components
-    print("\n1️⃣ Initializing components...")
+    print("\n1. Initializing components...")
     faq_db = FAQDatabase()
     prompt_gen = PromptGenerator()
     
@@ -93,7 +93,7 @@ async def test_faq_integration():
         faq_database=faq_db,
         use_faq=True
     )
-    print("   ✓ AI Agent initialized with FAQ")
+    print("   AI Agent initialized with FAQ")
     
     # Test queries
     test_queries = [
@@ -102,7 +102,7 @@ async def test_faq_integration():
         "What is the meaning of life?",  # Should fall back to LLM
     ]
     
-    print("\n2️⃣ Testing responses...")
+    print("\n2. Testing responses...")
     print("=" * 60)
     
     for i, query in enumerate(test_queries, 1):
@@ -114,11 +114,11 @@ async def test_faq_integration():
         response = await agent.think(query)
         elapsed = time.time() - start
         
-        print(f"🤖 Response: {response}")
-        print(f"⏱️  Time: {elapsed:.3f}s")
+        print(f"Response: {response}")
+        print(f"Time: {elapsed:.3f}s")
         print("=" * 60)
     
-    print("\n✅ FAQ Integration Test Complete!")
+    print("\nFAQ Integration Test Complete!")
 
 
 if __name__ == "__main__":

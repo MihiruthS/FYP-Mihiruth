@@ -19,9 +19,9 @@ faq = FAQDatabase()
 
 # Test queries - EXACT from user's log
 queries = [
-    "What is this department?",  # From: 📝 You said: 'What is this department?'
-    "Do you have postgraduate programs?",  # From: 📝 You said: 'Do you have postgraduate programs?'
-    "Where is the computer lab?",  # From: 📝 You said: 'Where is the computer lab?'
+    "What is this department?",  # From: You said: 'What is this department?'
+    "Do you have postgraduate programs?",  # From: You said: 'Do you have postgraduate programs?'
+    "Where is the computer lab?",  # From: You said: 'Where is the computer lab?'
 ]
 
 for query in queries:
@@ -33,15 +33,15 @@ for query in queries:
     
     if result:
         answer, score, matched_q = result
-        print(f"✅ MATCH FOUND")
+        print(f"MATCH FOUND")
         print(f"   Score: {score:.3f}")
         print(f"   Matched: '{matched_q}'")
         print(f"   Answer: {answer[:80]}...")
     else:
-        print(f"❌ NO MATCH (threshold: {faq.similarity_threshold})")
+        print(f"NO MATCH (threshold: {faq.similarity_threshold})")
         
         # Show closest match even if below threshold
-        print("\n🔍 Finding closest match...")
+        print("\nFinding closest match...")
         query_embedding = faq.embeddings_model.embed_query(query)
         import numpy as np
         query_emb = np.array(query_embedding)

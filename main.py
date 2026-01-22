@@ -29,8 +29,8 @@ if __name__ == "__main__":
         pipeline = RobotVoicePipeline()
         asyncio.run(pipeline.run())
     except KeyboardInterrupt:
-        print("\n👋 Pipeline stopped by user")
+        print("\nPipeline stopped by user")
     except Exception as e:
-        print(f"❌ Error: {e}")
+        print(f"Error: {e}")
         import traceback
         traceback.print_exc()

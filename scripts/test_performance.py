@@ -42,7 +42,7 @@ async def test_performance():
             response += chunk
         
         elapsed = time.time() - start_time
-        print(f"   ⏱️  Time: {elapsed:.2f}s")
+        print(f"   Time: {elapsed:.2f}s")
         print(f"   Response: {response[:80]}...")
     
     print("\n" + "="*60)

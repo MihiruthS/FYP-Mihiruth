@@ -50,12 +50,12 @@ def main():
     args = parser.parse_args()
     
     print("=" * 60)
-    print("🚀 RAG Database Initialization")
+    print("RAG Database Initialization")
     print("=" * 60)
     
     # Check if OpenAI API key is set
     if not os.getenv("OPENAI_API_KEY"):
-        print("❌ Error: OPENAI_API_KEY not found in environment variables")
+        print("Error: OPENAI_API_KEY not found in environment variables")
         print("   Please add it to your .env file or export it:")
         print("   export OPENAI_API_KEY='your-api-key-here'")
         sys.exit(1)
@@ -63,18 +63,18 @@ def main():
     # Check if documents directory exists
     docs_path = Path(args.docs_dir)
     if not docs_path.exists():
-        print(f"❌ Error: Documents directory not found: {args.docs_dir}")
+        print(f"Error: Documents directory not found: {args.docs_dir}")
         sys.exit(1)
     
     # Count documents
     txt_files = list(docs_path.glob("*.txt"))
-    print(f"📚 Found {len(txt_files)} document(s) in {args.docs_dir}")
+    print(f"Found {len(txt_files)} document(s) in {args.docs_dir}")
     if not txt_files:
-        print("⚠️  Warning: No .txt files found in documents directory")
+        print("Warning: No .txt files found in documents directory")
         sys.exit(1)
     
     # Initialize RAG database
-    print("\n🔧 Initializing RAG Database...")
+    print("\nInitializing RAG Database...")
     
     try:
         rag_db = RAGDatabase(
@@ -86,16 +86,16 @@ def main():
         
         # Reset if requested
         if args.reset:
-            print("\n🗑️  Resetting database...")
+            print("\nResetting database...")
             rag_db.clear_database()
-            print("✅ Database cleared")
+            print("Database cleared")
             
-            print("\n📦 Loading and indexing documents...")
+            print("\nLoading and indexing documents...")
             rag_db.load_documents()
         
         # Show statistics
         print("\n" + "=" * 60)
-        print("📊 Database Statistics")
+        print("Database Statistics")
         print("=" * 60)
         
         stats = rag_db.get_stats()
@@ -105,7 +105,7 @@ def main():
         
         # Test retrieval
         print("\n" + "=" * 60)
-        print("🧪 Testing Retrieval")
+        print("Testing Retrieval")
         print("=" * 60)
         
         test_queries = [
@@ -118,21 +118,21 @@ def main():
             print(f"\nQuery: {query}")
             docs = rag_db.retrieve(query, k=2)
             if docs:
-                print(f"  ✓ Retrieved {len(docs)} relevant chunks")
+                print(f"  Retrieved {len(docs)} relevant chunks")
                 # Show a snippet of first result
                 snippet = docs[0].page_content[:150].replace('\n', ' ')
                 print(f"  Preview: {snippet}...")
             else:
-                print("  ✗ No documents retrieved")
+                print("  No documents retrieved")
         
         print("\n" + "=" * 60)
-        print("✅ RAG Database initialized successfully!")
+        print("RAG Database initialized successfully!")
         print("=" * 60)
         print("\nYou can now run the robot voice pipeline with RAG enabled:")
         print("  python main.py")
         
     except Exception as e:
-        print(f"\n❌ Error initializing database: {e}")
+        print(f"\nError initializing database: {e}")
         import traceback
         traceback.print_exc()
         sys.exit(1)

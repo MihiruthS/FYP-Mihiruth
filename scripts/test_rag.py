@@ -24,27 +24,27 @@ async def test_rag_integration():
     """Test RAG integration with AI Agent."""
     
     print("=" * 60)
-    print("🧪 Testing RAG Integration")
+    print("Testing RAG Integration")
     print("=" * 60)
     
     # Initialize components
-    print("\n1️⃣ Initializing RAG Database...")
+    print("\n1. Initializing RAG Database...")
     rag_db = RAGDatabase(
         persist_directory="./data/chroma_db",
         documents_directory="./src/knowledge_base/documents"
     )
     
     stats = rag_db.get_stats()
-    print(f"   ✓ Database ready with {stats.get('total_chunks', 0)} chunks")
+    print(f"   Database ready with {stats.get('total_chunks', 0)} chunks")
     
-    print("\n2️⃣ Initializing AI Agent with RAG...")
+    print("\n2. Initializing AI Agent with RAG...")
     prompt_gen = PromptGenerator()
     agent = AIAgent(
         prompt_generator=prompt_gen,
         rag_database=rag_db,
         use_rag=True
     )
-    print("   ✓ AI Agent initialized")
+    print("   AI Agent initialized")
     
     # Test queries
     test_queries = [
@@ -54,7 +54,7 @@ async def test_rag_integration():
         "What research facilities are available?",
     ]
     
-    print("\n3️⃣ Testing RAG-enhanced responses...")
+    print("\n3. Testing RAG-enhanced responses...")
     print("=" * 60)
     
     for i, query in enumerate(test_queries, 1):
@@ -64,17 +64,17 @@ async def test_rag_integration():
         # Get RAG context
         context = rag_db.get_context_string(query, k=2, max_length=500)
         if context:
-            print("📚 Retrieved Context:")
+            print("Retrieved Context:")
             # Show first 150 chars of context
             context_preview = context.split('\n')[1][:150] if '\n' in context else context[:150]
             print(f"   {context_preview}...")
         
         # Get AI response
         response = await agent.think(query)
-        print(f"\n🤖 Response: {response}")
+        print(f"\nResponse: {response}")
         print("=" * 60)
     
-    print("\n✅ RAG Integration Test Complete!")
+    print("\nRAG Integration Test Complete!")
     print("\nThe system is ready to use. Run 'python main.py' to start the voice pipeline.")
 
 

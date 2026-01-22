@@ -34,9 +34,9 @@ async def test_faq():
     ]
     
     for q in questions:
-        print(f"\n❓ Question: {q}")
+        print(f"\nQuestion: {q}")
         response = await pipeline.agent.think(q)
-        print(f"✅ Response: {response[:100]}...")
+        print(f"Response: {response[:100]}...")
     
     print("\n" + "="*60)
     print("Test Complete")

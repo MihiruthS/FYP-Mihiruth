@@ -58,7 +58,7 @@ class AudioPlayback:
         )
         
         self._is_playing = True
-        print(f"🔊 Audio playback started (sample_rate={self.sample_rate}Hz)")
+        print(f"Audio playback started (sample_rate={self.sample_rate}Hz)")
     
     def stop(self):
         """Stop and cleanup audio playback."""
@@ -76,7 +76,7 @@ class AudioPlayback:
             self._audio.terminate()
             self._audio = None
         
-        print("🔇 Audio playback stopped")
+        print("Audio playback stopped")
     
     def play(self, audio_data: bytes):
         """
