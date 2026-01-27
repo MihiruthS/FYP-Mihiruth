@@ -28,14 +28,16 @@ class AudioCapture:
         self,
         sample_rate: int = 16000,
         channels: int = 1,
-        chunk_size: int = 1024,  # ~64ms (ideal for streaming STT)
-        rms_threshold: int = 300,  # Silence filter (tune if needed)
+        chunk_size: int = 3200,  # ~200ms (better for USB mics)
+        rms_threshold: int = 150,  # Lower threshold for better sensitivity
         max_queue_size: int = 5,   # Prevent latency buildup
+        device_index: Optional[int] = None,  # Specific device (e.g., ReSpeaker)
     ):
         self.sample_rate = sample_rate
         self.channels = channels
         self.chunk_size = chunk_size
         self.rms_threshold = rms_threshold
+        self.device_index = device_index
 
         self.format = pyaudio.paInt16  # 16-bit PCM
         self.sample_width = 2  # bytes
@@ -57,11 +59,18 @@ class AudioCapture:
         self._audio_queue = asyncio.Queue(maxsize=5)
 
         self._audio = pyaudio.PyAudio()
+        
+        # Auto-detect ReSpeaker if no device specified
+        device_to_use = self.device_index
+        if device_to_use is None:
+            device_to_use = self._find_respeaker_device()
+        
         self._stream = self._audio.open(
             format=self.format,
             channels=self.channels,
             rate=self.sample_rate,
             input=True,
+            input_device_index=device_to_use,
             frames_per_buffer=self.chunk_size,
             stream_callback=self._audio_callback,
         )
@@ -88,6 +97,26 @@ class AudioCapture:
             self._audio = None
 
         print("Microphone stopped")
+
+    def _find_respeaker_device(self) -> Optional[int]:
+        """Auto-detect ReSpeaker 4 Mic Array device index."""
+        if not self._audio:
+            return None
+        
+        info = self._audio.get_host_api_info_by_index(0)
+        numdevices = info.get('deviceCount')
+        
+        for i in range(0, numdevices):
+            device_info = self._audio.get_device_info_by_host_api_device_index(0, i)
+            device_name = device_info.get('name', '').lower()
+            
+            # Look for ReSpeaker in device name
+            if 'respeaker' in device_name and device_info.get('maxInputChannels', 0) > 0:
+                print(f"Auto-detected ReSpeaker at device index {i}: {device_info.get('name')}")
+                return i
+        
+        print("ReSpeaker not found, using default input device")
+        return None
 
     def _audio_callback(self, in_data, frame_count, time_info, status):
         if not self._is_recording or not self._audio_queue:

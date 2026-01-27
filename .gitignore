@@ -29,6 +29,7 @@ venv/
 env/
 ENV/
 .venv
+.venv/
 
 # Environment variables
 .env
@@ -48,3 +49,4 @@ Thumbs.db
 data/chroma_db/
 *.sqlite3
 *.bin
+

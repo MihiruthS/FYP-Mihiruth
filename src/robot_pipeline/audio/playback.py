@@ -24,7 +24,7 @@ class AudioPlayback:
         self,
         sample_rate: int = 24000,
         channels: int = 1,
-        chunk_size: int = 512,  # Smaller chunks for lower latency
+        chunk_size: int = 2048,  # Larger chunks to prevent underruns
     ):
         """
         Initialize audio playback.
