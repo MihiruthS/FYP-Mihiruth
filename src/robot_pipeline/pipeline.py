@@ -26,6 +26,18 @@ PROJECT_ROOT = Path(__file__).parent.parent.parent.absolute()
 class RobotVoicePipeline:
     def __init__(self):
         self.is_awake = False
+        self.pending_escort = None  # Tracks location waiting for confirmation
+        
+        # Location mapping for escort commands
+        self.location_mapping = {
+            "computer lab": "computer_lab",
+            "conference room": "conference_room",
+            "head of the department's office": "hod_office",
+            "head of department's office": "hod_office",
+            "hod office": "hod_office",
+            "department office": "department_office",
+        }
+        
         # Wake words with common STT mishearings of "Quanta"
         self.wake_words = [
             "hey quanta", "hello quanta", "hi quanta",
@@ -44,6 +56,8 @@ class RobotVoicePipeline:
             "hey quota", "hello quota", "hi quota"
         ]
         self.sleep_words = ["exit", "quit", "stop", "goodbye", "bye", "thank you", "thanks"]
+        self.confirmation_words = ["yes", "sure", "okay", "ok", "please", "confirm", "yeah", "yep"]
+        self.rejection_words = ["no", "nope", "cancel", "nevermind", "never mind"]
 
         self.prompt_generator = PromptGenerator()
 
@@ -84,6 +98,41 @@ class RobotVoicePipeline:
         text = text.lower().strip()
         text = text.translate(str.maketrans('', '', string.punctuation))
         return text
+    
+    def _check_escort_request(self, response: str):
+        """Check if response is asking for escort confirmation."""
+        response_lower = response.lower()
+        if "confirm" in response_lower and "take" in response_lower:
+            # Extract location from confirmation request
+            for location_name, location_id in self.location_mapping.items():
+                if location_name in response_lower:
+                    self.pending_escort = location_id
+                    print(f"⏳ Escort pending confirmation: {location_id}")
+                    return True
+        return False
+    
+    def _handle_escort_confirmation(self, user_input: str) -> bool:
+        """Check if user is confirming or rejecting pending escort."""
+        if not self.pending_escort:
+            return False
+        
+        user_lower = user_input.lower()
+        
+        # Check for confirmation
+        if any(word in user_lower for word in self.confirmation_words):
+            if hasattr(self, 'ros_node'):
+                self.ros_node.publish_location(self.pending_escort)
+                print(f"🚶 Escorting confirmed: {self.pending_escort}")
+            self.pending_escort = None
+            return True
+        
+        # Check for rejection
+        if any(word in user_lower for word in self.rejection_words):
+            print(f"❌ Escort cancelled: {self.pending_escort}")
+            self.pending_escort = None
+            return True
+        
+        return False
 
     async def listen_for_wake_word(self) -> bool:
         print("\nSleeping... Say 'Hey Quanta'")
@@ -139,6 +188,16 @@ class RobotVoicePipeline:
 
             if not transcript:
                 return True
+            
+            # Check if user is confirming/rejecting a pending escort
+            if self._handle_escort_confirmation(transcript):
+                # If confirming, escort
+                if any(word in transcript.lower() for word in self.confirmation_words):
+                    await self._speak(f"Sure. Please follow me.")
+                # If rejecting, acknowledge
+                elif any(word in transcript.lower() for word in self.rejection_words):
+                    await self._speak("Okay, no problem.")
+                return True
 
             # Smart sleep word detection - only sleep if it's clearly a goodbye
             # Not if "thank you" is part of a longer sentence with a question
@@ -179,8 +238,10 @@ class RobotVoicePipeline:
             self.audio_playback.start()
 
         buffer = ""
+        full_response = ""  # Track complete response for ROS2
         async for chunk in self.agent.think_stream(user_text):
             buffer += chunk
+            full_response += chunk
             
             # Split buffer at punctuation boundaries
             while True:
@@ -205,6 +266,10 @@ class RobotVoicePipeline:
         if buffer.strip():
             audio = self.tts.synthesize_stream(buffer)
             await self.audio_playback.play_stream(audio)
+        
+        # Check if response is asking for escort confirmation
+        if full_response:
+            self._check_escort_request(full_response)
 
     async def _speak(self, text: str):
         if not self.tts._is_connected:

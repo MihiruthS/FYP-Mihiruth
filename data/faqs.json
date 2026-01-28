@@ -97,49 +97,67 @@
     },
     {
         "question": "I want to go to the computer lab.",
-        "answer": "Computer lab is in the first floor. Shall I escort you there?",
+        "answer": "PLEASE CONFIRM THAT YOU WANT ME TO TAKE YOU TO THE COMPUTER LAB",
         "category": "location",
         "keywords": ["computer lab", "lab", "want to go" ]
     },
     {
         "question": "I want to go to the department office.",
-        "answer": "The department office is in the first floor. Shall I escort you there?",
+        "answer": "PLEASE CONFIRM THAT YOU WANT ME TO TAKE YOU TO THE DEPARTMENT OFFICE",
         "category": "location",
         "keywords": ["office", "department office", "want to go" ]
     },
     {
         "question": "I want to go to the HOD office.",
-        "answer": "The Head of Department's office is in the first floor. Shall I escort you there?",
+        "answer": "PLEASE CONFIRM THAT YOU WANT ME TO TAKE YOU TO THE HEAD OF THE DEPARTMENT'S OFFICE",
         "category": "location",
-        "keywords": ["hod office", "head office",  "want to go" ]
+        "keywords": ["hod office", "head office", "head of department", "head of the department", "want to go" ]
+    },
+    {
+        "question": "I want to go to the head of the department's office.",
+        "answer": "PLEASE CONFIRM THAT YOU WANT ME TO TAKE YOU TO THE HEAD OF THE DEPARTMENT'S OFFICE",
+        "category": "location",
+        "keywords": ["hod", "head of department", "head of the department", "head of department's office", "want to go" ]
     },
     {
         "question": "I want to go to the Conference Room.",
-        "answer": "The Conference Room is in the first floor. Shall I escort you there?",
+        "answer": "PLEASE CONFIRM THAT YOU WANT ME TO TAKE YOU TO THE CONFERENCE ROOM",
         "category": "location",
         "keywords": ["conference room", "conference", "want to go" ]
     },
     {
         "question": "Can you take me to the computer lab?",
-        "answer": "SURE, PLEASE FOLLOW ME TO THE COMPUTER LAB.",
+        "answer": "PLEASE CONFIRM THAT YOU WANT ME TO TAKE YOU TO THE COMPUTER LAB",
         "category": "escort",
         "keywords": ["computer lab", "lab", "escort", "take me"]
     },
     {
         "question": "Can you take me to the department office?",
-        "answer": "SURE, PLEASE FOLLOW ME TO THE DEPARTMENT OFFICE.",
+        "answer": "PLEASE CONFIRM THAT YOU WANT ME TO TAKE YOU TO THE DEPARTMENT OFFICE",
         "category": "escort",
         "keywords": ["office", "department office", "admin", "escort", "take me"]
     },
     {
         "question": "Can you take me to the HOD office?",
-        "answer": "SURE, PLEASE FOLLOW ME TO THE HEAD OF DEPARTMENT'S OFFICE.",
+        "answer": "PLEASE CONFIRM THAT YOU WANT ME TO TAKE YOU TO THE HEAD OF THE DEPARTMENT'S OFFICE",
         "category": "escort",
-        "keywords": ["hod office", "head office", "escort", "take me"]
+        "keywords": ["hod office", "head office", "head of department", "head of the department", "escort", "take me"]
+    },
+    {
+        "question": "Can you take me to the head of the department's office?",
+        "answer": "PLEASE CONFIRM THAT YOU WANT ME TO TAKE YOU TO THE HEAD OF THE DEPARTMENT'S OFFICE",
+        "category": "escort",
+        "keywords": ["hod", "head of department", "head of the department", "head of department's office", "escort", "take me"]
+    },
+    {
+        "question": "Can you take me to the head of department office?",
+        "answer": "PLEASE CONFIRM THAT YOU WANT ME TO TAKE YOU TO THE HEAD OF THE DEPARTMENT'S OFFICE",
+        "category": "escort",
+        "keywords": ["hod", "head of department", "head of the department office", "escort", "take me"]
     },
     {
         "question": "Can you take me to the Conference Room?",
-        "answer": "SURE, PLEASE FOLLOW ME TO THE CONFERENCE ROOM.",
+        "answer": "PLEASE CONFIRM THAT YOU WANT ME TO TAKE YOU TO THE CONFERENCE ROOM",
         "category": "escort",
         "keywords": ["conference room", "conference", "escort", "take me"]
     },
