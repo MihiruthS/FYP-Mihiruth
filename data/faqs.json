@@ -79,49 +79,79 @@
     },
     {
         "question": "Where is the computer lab?",
-        "answer": "The Computer Lab is located on the first floor. I can take you there if you'd like.",
+        "answer": "The Computer Lab is located on the first floor. Would you like me to escort you there?",
         "category": "location",
-        "keywords": ["computer lab", "lab", "computers"]
+        "keywords": ["where", "computer lab", "lab", "computers"]
     },
     {
         "question": "Where is the department office?",
-        "answer": "The Department Office is located on the first floor. I can escort you there.",
+        "answer": "The Department Office is located on the first floor. Would you like me to escort you there?",
         "category": "location",
-        "keywords": ["office", "department office", "admin"]
+        "keywords": ["where", "department office", "office", "admin"]
     },
     {
         "question": "Where is the HOD office?",
-        "answer": "The Head of Department's office is located on the first floor. Would you like me to take you there?",
+        "answer": "The Head of Department's office is located on the first floor. Would you like me to escort you there?",
         "category": "location",
-        "keywords": ["hod office", "head office"]
+        "keywords": ["where", "hod office", "head office", "head of department"]
+    },
+    {
+        "question": "How can I go to the computer lab?",
+        "answer": "The Computer Lab is located on the first floor.",
+        "category": "directions",
+        "keywords": ["how can i go", "directions", "computer lab", "lab"]
+    },
+    {
+        "question": "How can I go to the department office?",
+        "answer": "The Department Office is located on the first floor.",
+        "category": "directions",
+        "keywords": ["how can i go", "directions", "department office", "admin"]
+    },
+    {
+        "question": "How can I go to the HOD office?",
+        "answer": "The Head of Department's office is located on the first floor.",
+        "category": "directions",
+        "keywords": ["how can i go", "directions", "hod office", "head office", "head of department"]
+    },
+    {
+        "question": "How can I go to the Conference Room?",
+        "answer": "The Conference Room is located on the First floor.",
+        "category": "directions",
+        "keywords": ["how can i go", "directions", "conference room", "conference"]
+    },
+    {
+        "question": "How can I go to the head of the department's office?",
+        "answer": "The Head of Department's office is located on the first floor.",
+        "category": "directions",
+        "keywords": ["how can i go", "directions", "head of department's office", "head of the department", "hod"]
     },
     {
         "question": "I want to go to the computer lab.",
-        "answer": "PLEASE CONFIRM THAT YOU WANT ME TO TAKE YOU TO THE COMPUTER LAB",
+        "answer": "The Computer Lab is located on the first floor. Would you like me to take you there?",
         "category": "location",
         "keywords": ["computer lab", "lab", "want to go" ]
     },
     {
         "question": "I want to go to the department office.",
-        "answer": "PLEASE CONFIRM THAT YOU WANT ME TO TAKE YOU TO THE DEPARTMENT OFFICE",
+        "answer": "The Head of Department's office is located on the first floor. Would you like me to take you there?",
         "category": "location",
         "keywords": ["office", "department office", "want to go" ]
     },
     {
         "question": "I want to go to the HOD office.",
-        "answer": "PLEASE CONFIRM THAT YOU WANT ME TO TAKE YOU TO THE HEAD OF THE DEPARTMENT'S OFFICE",
+        "answer": "The Head of Department's office is located on the first floor. Would you like me to take you there?",
         "category": "location",
         "keywords": ["hod office", "head office", "head of department", "head of the department", "want to go" ]
     },
     {
         "question": "I want to go to the head of the department's office.",
-        "answer": "PLEASE CONFIRM THAT YOU WANT ME TO TAKE YOU TO THE HEAD OF THE DEPARTMENT'S OFFICE",
+        "answer": "The Head of Department's office is located on the first floor. Would you like me to take you there?",
         "category": "location",
         "keywords": ["hod", "head of department", "head of the department", "head of department's office", "want to go" ]
     },
     {
         "question": "I want to go to the Conference Room.",
-        "answer": "PLEASE CONFIRM THAT YOU WANT ME TO TAKE YOU TO THE CONFERENCE ROOM",
+        "answer": "The Conference Room is located on the First floor. Would you like me to take you there?",
         "category": "location",
         "keywords": ["conference room", "conference", "want to go" ]
     },

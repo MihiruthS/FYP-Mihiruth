@@ -102,7 +102,15 @@ class RobotVoicePipeline:
     def _check_escort_request(self, response: str):
         """Check if response is asking for escort confirmation."""
         response_lower = response.lower()
-        if "confirm" in response_lower and "take" in response_lower:
+        
+        # Pattern 1: Direct confirmation request ("PLEASE CONFIRM...")
+        # Pattern 2: Polite offer ("Would you like me to take you...")
+        is_escort_request = (
+            ("confirm" in response_lower and "take" in response_lower) or
+            ("would you like" in response_lower and "take you" in response_lower)
+        )
+        
+        if is_escort_request:
             # Extract location from confirmation request
             for location_name, location_id in self.location_mapping.items():
                 if location_name in response_lower:
@@ -190,14 +198,25 @@ class RobotVoicePipeline:
                 return True
             
             # Check if user is confirming/rejecting a pending escort
-            if self._handle_escort_confirmation(transcript):
-                # If confirming, escort
-                if any(word in transcript.lower() for word in self.confirmation_words):
-                    await self._speak(f"Sure. Please follow me.")
-                # If rejecting, acknowledge
-                elif any(word in transcript.lower() for word in self.rejection_words):
-                    await self._speak("Okay, no problem.")
-                return True
+            # But ONLY accept yes/no as confirmation, not full questions
+            user_lower = transcript.lower().strip()
+            is_short_response = len(user_lower.split()) <= 3
+            
+            # If pending escort and short response, check confirmation
+            if self.pending_escort and is_short_response:
+                if self._handle_escort_confirmation(transcript):
+                    # If confirming, escort
+                    if any(word in transcript.lower() for word in self.confirmation_words):
+                        await self._speak(f"Sure. Please follow me.")
+                    # If rejecting, acknowledge
+                    elif any(word in transcript.lower() for word in self.rejection_words):
+                        await self._speak("Okay, no problem.")
+                    return True
+            
+            # If user asks a new question while escort pending, clear stale state
+            if self.pending_escort and not is_short_response:
+                print(f"⚠️  Clearing stale escort state: {self.pending_escort} (new query received)")
+                self.pending_escort = None
 
             # Smart sleep word detection - only sleep if it's clearly a goodbye
             # Not if "thank you" is part of a longer sentence with a question
