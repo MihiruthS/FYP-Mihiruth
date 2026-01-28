@@ -26,7 +26,9 @@ PROJECT_ROOT = Path(__file__).parent.parent.parent.absolute()
 class RobotVoicePipeline:
     def __init__(self):
         self.is_awake = False
+        self.is_escorting = False  # Track if robot is currently escorting
         self.pending_escort = None  # Tracks location waiting for confirmation
+        self.last_mentioned_location = None  # Track last location mentioned in conversation
         
         # Location mapping for escort commands
         self.location_mapping = {
@@ -105,18 +107,34 @@ class RobotVoicePipeline:
         
         # Pattern 1: Direct confirmation request ("PLEASE CONFIRM...")
         # Pattern 2: Polite offer ("Would you like me to take you...")
+        # Pattern 3: Shall/Should patterns ("SHALL I ESCORT YOU", "SHOULD I TAKE YOU")
+        # Pattern 4: Want patterns ("DO YOU WANT ME TO TAKE YOU")
         is_escort_request = (
             ("confirm" in response_lower and "take" in response_lower) or
-            ("would you like" in response_lower and "take you" in response_lower)
+            ("would you like" in response_lower and "take you" in response_lower) or
+            ("shall i" in response_lower and ("escort" in response_lower or "take" in response_lower)) or
+            ("should i" in response_lower and ("escort" in response_lower or "take" in response_lower)) or
+            ("want me to" in response_lower and ("escort" in response_lower or "take" in response_lower)) or
+            ("do you want" in response_lower and ("escort" in response_lower or "take" in response_lower))
         )
         
         if is_escort_request:
-            # Extract location from confirmation request
+            # Try to extract location from response
+            location_found = None
             for location_name, location_id in self.location_mapping.items():
                 if location_name in response_lower:
-                    self.pending_escort = location_id
-                    print(f"⏳ Escort pending confirmation: {location_id}")
-                    return True
+                    location_found = location_id
+                    break
+            
+            # If no location in response but we have a last mentioned location, use it
+            if not location_found and self.last_mentioned_location:
+                location_found = self.last_mentioned_location
+            
+            if location_found:
+                self.pending_escort = location_found
+                print(f"⏳ Escort pending confirmation: {location_found}")
+                return True
+        
         return False
     
     def _handle_escort_confirmation(self, user_input: str) -> bool:
@@ -196,6 +214,14 @@ class RobotVoicePipeline:
 
             if not transcript:
                 return True
+            
+            # Track location mentions in user queries
+            transcript_lower = transcript.lower()
+            for location_name, location_id in self.location_mapping.items():
+                if location_name in transcript_lower:
+                    self.last_mentioned_location = location_id
+                    print(f"📍 Location mentioned: {location_id}")
+                    break
             
             # Check if user is confirming/rejecting a pending escort
             # But ONLY accept yes/no as confirmation, not full questions
@@ -316,6 +342,11 @@ class RobotVoicePipeline:
 
         try:
             while True:
+                # Skip conversational pipeline when escorting
+                if self.is_escorting:
+                    await asyncio.sleep(0.5)
+                    continue
+                
                 if not self.is_awake:
                     if not await self.listen_for_wake_word():
                         break
