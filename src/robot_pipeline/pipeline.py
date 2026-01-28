@@ -267,6 +267,9 @@ class RobotVoicePipeline:
             audio = self.tts.synthesize_stream(buffer)
             await self.audio_playback.play_stream(audio)
         
+        # Wait for audio buffer to fully play out before mic starts again
+        await asyncio.sleep(0.5)  # 500ms delay to prevent echo
+        
         # Check if response is asking for escort confirmation
         if full_response:
             self._check_escort_request(full_response)
@@ -279,6 +282,9 @@ class RobotVoicePipeline:
 
         audio = self.tts.synthesize_stream(text)
         await self.audio_playback.play_stream(audio)
+        
+        # Wait for audio buffer to fully play out
+        await asyncio.sleep(0.5)  # 500ms delay to prevent echo
 
     async def run(self):
         print("\nROBOT VOICE PIPELINE STARTED")

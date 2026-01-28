@@ -32,7 +32,7 @@ class TextToSpeech:
         sample_rate: int = 24000,
         encoding: str = "pcm_s16le",
         language: str = "en",
-        speed: str = "normal",  # Changed from "slow" to "normal" for faster responses
+        speed: str = "slow",  # Options: "slowest", "slow", "normal", "fast", "fastest"
     ):
         """
         Initialize the TTS client.
@@ -44,7 +44,7 @@ class TextToSpeech:
             sample_rate: Audio sample rate in Hz (default: 24000)
             encoding: Audio encoding format (default: pcm_s16le)
             language: Language code (default: en)
-            speed: Speech speed - "slowest", "slow", "normal", "fast", "fastest" (default: normal)
+            speed: Speech speed - "slowest", "slow", "normal", "fast", "fastest" (default: slow)
         """
         self.api_key = api_key or os.getenv("CARTESIA_API_KEY")
         if not self.api_key:

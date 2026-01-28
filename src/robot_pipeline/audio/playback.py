@@ -24,7 +24,7 @@ class AudioPlayback:
         self,
         sample_rate: int = 24000,
         channels: int = 1,
-        chunk_size: int = 2048,  # Larger chunks to prevent underruns
+        chunk_size: int = 8192,  # Larger buffer to prevent underruns (was 2048)
     ):
         """
         Initialize audio playback.
@@ -55,6 +55,7 @@ class AudioPlayback:
             rate=self.sample_rate,
             output=True,
             frames_per_buffer=self.chunk_size,
+            stream_callback=None,
         )
         
         self._is_playing = True
