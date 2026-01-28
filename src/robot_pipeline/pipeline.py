@@ -77,7 +77,7 @@ class RobotVoicePipeline:
         )
 
         self.audio_capture = AudioCapture(sample_rate=16000)
-        self.audio_playback = AudioPlayback(sample_rate=24000)
+        self.audio_playback = AudioPlayback(sample_rate=24000)  # mouth_controller added later via ROS2
         self.stt = SpeechToText()
         self.tts = TextToSpeech()
 

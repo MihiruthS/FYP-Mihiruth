@@ -2,7 +2,7 @@
 Audio Playback Module for Robot Voice Pipeline
 
 Plays audio through the system speakers using PyAudio.
-Handles PCM audio format from TTS services.
+Handles PCM audio format from TTS services and controls mouth movement.
 """
 
 import asyncio
@@ -25,6 +25,7 @@ class AudioPlayback:
         sample_rate: int = 24000,
         channels: int = 1,
         chunk_size: int = 8192,  # Larger buffer to prevent underruns (was 2048)
+        mouth_controller=None,  # MouthController instance for lip sync
     ):
         """
         Initialize audio playback.
@@ -33,11 +34,13 @@ class AudioPlayback:
             sample_rate: Audio sample rate in Hz (default: 24000 for Cartesia)
             channels: Number of audio channels (default: 1 for mono)
             chunk_size: Size of audio chunks to play at once
+            mouth_controller: MouthController instance for mouth movement sync
         """
         self.sample_rate = sample_rate
         self.channels = channels
         self.chunk_size = chunk_size
         self.format = pyaudio.paInt16  # 16-bit PCM
+        self.mouth_controller = mouth_controller
         
         self._audio: Optional[pyaudio.PyAudio] = None
         self._stream: Optional[pyaudio.Stream] = None
@@ -119,7 +122,7 @@ class AudioPlayback:
     
     async def play_stream(self, audio_stream):
         """
-        Play audio from an async stream.
+        Play audio from an async stream with mouth movement sync.
         
         Args:
             audio_stream: Async iterator yielding audio chunks
@@ -129,9 +132,23 @@ class AudioPlayback:
         
         async for audio_chunk in audio_stream:
             if audio_chunk:
+                # Write audio to buffer first (this gets buffered before playing)
                 self._stream.write(audio_chunk)
+                
+                # Then trigger mouth movement with delay compensation
+                if self.mouth_controller:
+                    # Use asyncio.create_task to not block audio playback
+                    asyncio.create_task(
+                        self.mouth_controller.process_audio_chunk_delayed(audio_chunk)
+                    )
+                
                 # Yield control to allow other tasks to run
                 await asyncio.sleep(0)
+        
+        # Close mouth after speaking
+        if self.mouth_controller:
+            await asyncio.sleep(0.2)  # Wait for final audio to play
+            self.mouth_controller.close_mouth()
     
     def __enter__(self):
         """Context manager entry."""

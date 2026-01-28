@@ -32,7 +32,7 @@ class TextToSpeech:
         sample_rate: int = 24000,
         encoding: str = "pcm_s16le",
         language: str = "en",
-        speed: str = "slow",  # Options: "slowest", "slow", "normal", "fast", "fastest"
+        speed: str = "slowest",  # Options: "slowest", "slow", "normal", "fast", "fastest"
     ):
         """
         Initialize the TTS client.
