@@ -19,6 +19,7 @@ class VoicePipelineNode(Node):
         /locations (String): Escort destination location
         /motor_pos (Int32MultiArray): Motor positions [channel, position]
         /motor_speed (Int32MultiArray): Motor speeds [channel, speed]
+        /current_emotion (String): Current emotion being displayed
     
     Subscribers:
         /arrived (Bool): Notification when robot arrives at destination
@@ -43,6 +44,9 @@ class VoicePipelineNode(Node):
         self.motor_speed_pub = self.create_publisher(
             Int32MultiArray, '/motor_speed', 10
         )
+        self.emotion_pub = self.create_publisher(
+            String, '/current_emotion', 10
+        )
         
         # Subscribers
         self.arrived_sub = self.create_subscription(
@@ -60,6 +64,7 @@ class VoicePipelineNode(Node):
         self.get_logger().info('  - /locations')
         self.get_logger().info('  - /motor_pos')
         self.get_logger().info('  - /motor_speed')
+        self.get_logger().info('  - /current_emotion')
         self.get_logger().info('Subscribing to:')
         self.get_logger().info('  - /arrived')
     
@@ -85,6 +90,13 @@ class VoicePipelineNode(Node):
         msg = Int32MultiArray()
         msg.data = [channel, speed]
         self.motor_speed_pub.publish(msg)
+    
+    def publish_emotion(self, emotion: str):
+        """Publish current emotion."""
+        msg = String()
+        msg.data = emotion
+        self.emotion_pub.publish(msg)
+        self.get_logger().info(f'🎭 Emotion: {emotion}')
     
     def arrived_callback(self, msg: Bool):
         """Handle arrival notification from /arrived topic."""

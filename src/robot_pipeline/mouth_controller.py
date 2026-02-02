@@ -2,22 +2,26 @@
 Mouth Controller for Robot Voice Pipeline
 
 Analyzes audio amplitude and controls jaw servo positions for lip sync.
+Also controls facial expressions for emotions.
 """
 from rclpy.node import Node
 import numpy as np
 import asyncio
 from collections import deque
-from typing import Optional
+from typing import Optional, Literal
 import time
 import random
+
+EmotionType = Literal["neutral", "joy", "fear", "disgust", "sadness", "anger", "surprise"]
 
 
 class MouthController:
     """
-    Controls robot mouth movement based on audio amplitude.
+    Controls robot mouth movement based on audio amplitude and displays emotions.
     
     Analyzes audio data and maps amplitude to jaw servo positions.
     Uses a delay buffer to sync with audio playback latency.
+    Supports 7 emotions: neutral, joy, fear, disgust, sadness, anger, surprise.
     """
     
     def __init__(self, ros_node=None, delay_ms: int = 100, mouth_opening_scale: float = 1.2):
@@ -57,6 +61,9 @@ class MouthController:
         # Smoothing factor for mouth movement (0-1, higher = smoother)
         self.smoothing = 0.3
         self.last_jaw_position = 0
+        
+        # Current emotion state
+        self.current_emotion = "neutral"
     
     def blink(self):
         """Perform a single blink action."""
@@ -180,3 +187,99 @@ class MouthController:
     def _map_range(self, value, in_min, in_max, out_min, out_max):
         """Map value from one range to another."""
         return out_min + (float(value - in_min) / float(in_max - in_min) * (out_max - out_min))
+    
+    # ========== EMOTION DISPLAY METHODS ==========
+    
+    def set_emotion(self, emotion: EmotionType):
+        """
+        Set the robot's facial expression to display an emotion.
+        
+        Args:
+            emotion: One of "neutral", "joy", "fear", "disgust", "sadness", "anger", "surprise"
+        """
+        if not self.ros_node:
+            return
+        
+        self.current_emotion = emotion
+        print(f"😊 Setting emotion: {emotion}")
+        
+        # Publish emotion to ROS2 topic
+        self.ros_node.publish_emotion(emotion)
+        
+        # Map emotion to specific facial expression
+        emotion_handlers = {
+            "neutral": self._display_neutral,
+            "joy": self._display_joy,
+            "fear": self._display_fear,
+            "disgust": self._display_disgust,
+            "sadness": self._display_sadness,
+            "anger": self._display_anger,
+            "surprise": self._display_surprise,
+        }
+        
+        handler = emotion_handlers.get(emotion, self._display_neutral)
+        handler()
+    
+    def _display_neutral(self):
+        """Display neutral expression: relaxed, open eyes, mouth closed."""
+        if not self.ros_node:
+            return
+        
+        # Eyes: normal position (open)
+        self.ros_node.publish_motor_pos(self.upper_lid_channel, 1200*4)
+        self.ros_node.publish_motor_pos(self.lower_lid_channel, 1120*4)
+    
+    def _display_joy(self):
+        """Display joy expression: eyes slightly narrowed (smiling eyes), mouth ready to smile."""
+        if not self.ros_node:
+            return
+        
+        # Eyes: slightly narrowed (smiling eyes)
+        self.ros_node.publish_motor_pos(self.upper_lid_channel, 1400*4)  # Upper lid slightly down
+        self.ros_node.publish_motor_pos(self.lower_lid_channel, 1300*4)  # Lower lid slightly up
+    
+    def _display_fear(self):
+        """Display fear expression: eyes wide open, eyebrows raised."""
+        if not self.ros_node:
+            return
+        
+        # Eyes: wide open
+        self.ros_node.publish_motor_pos(self.upper_lid_channel, 900*4)   # Upper lid very high
+        self.ros_node.publish_motor_pos(self.lower_lid_channel, 1000*4)  # Lower lid down
+    
+    def _display_disgust(self):
+        """Display disgust expression: eyes slightly narrowed, nose wrinkled."""
+        if not self.ros_node:
+            return
+        
+        # Eyes: slightly narrowed with slight squint
+        self.ros_node.publish_motor_pos(self.upper_lid_channel, 1500*4)  # Upper lid down
+        self.ros_node.publish_motor_pos(self.lower_lid_channel, 1350*4)  # Lower lid up
+    
+    def _display_sadness(self):
+        """Display sadness expression: eyes slightly drooped, eyebrows down."""
+        if not self.ros_node:
+            return
+        
+        # Eyes: slightly drooped/tired looking
+        self.ros_node.publish_motor_pos(self.upper_lid_channel, 1600*4)  # Upper lid drooped
+        self.ros_node.publish_motor_pos(self.lower_lid_channel, 1200*4)  # Lower lid normal
+    
+    def _display_anger(self):
+        """Display anger expression: eyes narrowed, eyebrows furrowed."""
+        if not self.ros_node:
+            return
+        
+        # Eyes: narrowed and intense
+        self.ros_node.publish_motor_pos(self.upper_lid_channel, 1700*4)  # Upper lid very low
+        self.ros_node.publish_motor_pos(self.lower_lid_channel, 1400*4)  # Lower lid high
+    
+    def _display_surprise(self):
+        """Display surprise expression: eyes very wide, eyebrows raised high."""
+        if not self.ros_node:
+            return
+        
+        # Eyes: very wide open
+        self.ros_node.publish_motor_pos(self.upper_lid_channel, 800*4)   # Upper lid highest
+        self.ros_node.publish_motor_pos(self.lower_lid_channel, 900*4)   # Lower lid lowest
+

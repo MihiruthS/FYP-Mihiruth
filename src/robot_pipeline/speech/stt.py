@@ -61,6 +61,8 @@ class SpeechToText:
         if self._is_connected:
             return
         
+        print("Connecting to AssemblyAI STT...")
+        
         params = {
             "sample_rate": self.sample_rate,
             "encoding": "pcm_s16le", 
@@ -73,12 +75,20 @@ class SpeechToText:
         
         url = f"wss://streaming.assemblyai.com/v3/ws?{urlencode(params)}"
         
-        self._ws = await websockets.connect(
-            url,
-            additional_headers={"Authorization": self.api_key}
-        )
-        self._is_connected = True
-        print("Connected to AssemblyAI STT")
+        try:
+            self._ws = await websockets.connect(
+                url,
+                additional_headers={"Authorization": self.api_key},
+                ping_interval=20,  # Send ping every 20 seconds
+                ping_timeout=10,   # Wait 10 seconds for pong
+                close_timeout=5    # Timeout for closing connection
+            )
+            self._is_connected = True
+            print("✅ Connected to AssemblyAI STT")
+        except Exception as e:
+            print(f"❌ Failed to connect to AssemblyAI: {e}")
+            print("   Check your internet connection and API key")
+            raise
     
     async def send_audio(self, audio_chunk: bytes):
         """Send audio chunk to AssemblyAI for transcription."""
@@ -191,9 +201,10 @@ class SpeechToText:
             while self._is_connected:
                 try:
                     # Set a timeout for receiving to avoid hanging forever
+                    # Increased from 0.5s to 2.0s for slower networks
                     transcript = await asyncio.wait_for(
                         self.receive_transcript(), 
-                        timeout=0.5
+                        timeout=2.0
                     )
                     
                     if transcript:

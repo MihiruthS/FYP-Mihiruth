@@ -18,6 +18,7 @@ from robot_pipeline.ai.agent import AIAgent
 from robot_pipeline.ai.prompts import PromptGenerator
 from robot_pipeline.ai.rag_database import RAGDatabase
 from robot_pipeline.ai.faq_database import FAQDatabase
+from robot_pipeline.emotion_classifier import EmotionClassifier
 
 
 PROJECT_ROOT = Path(__file__).parent.parent.parent.absolute()
@@ -90,6 +91,10 @@ class RobotVoicePipeline:
             use_rag=True,
             use_faq=True
         )
+        
+        # Emotion classifier for facial expressions
+        self.emotion_classifier = EmotionClassifier()
+        self.mouth_controller = None  # Will be set by ROS2 bridge
 
         print("Robot Voice Pipeline Initialized")
 
@@ -284,9 +289,19 @@ class RobotVoicePipeline:
 
         buffer = ""
         full_response = ""  # Track complete response for ROS2
+        
+        # Start emotion classification in background (non-blocking)
+        emotion_task = None
+        
         async for chunk in self.agent.think_stream(user_text):
             buffer += chunk
             full_response += chunk
+            
+            # Start emotion classification early with first ~20 chars (runs in parallel)
+            if emotion_task is None and len(full_response) >= 20:
+                emotion_task = asyncio.create_task(
+                    self._classify_and_display_emotion(full_response)
+                )
             
             # Split buffer at punctuation boundaries
             while True:
@@ -315,15 +330,45 @@ class RobotVoicePipeline:
         # Wait for audio buffer to fully play out before mic starts again
         await asyncio.sleep(0.5)  # 500ms delay to prevent echo
         
+        # Ensure emotion task completes (but don't block if it's not done yet)
+        if emotion_task and not emotion_task.done():
+            # Let it finish in background, don't wait
+            pass
+        
         # Check if response is asking for escort confirmation
         if full_response:
             self._check_escort_request(full_response)
+    
+    async def _classify_and_display_emotion(self, text: str):
+        """
+        Classify emotion from text and display it on the robot's face.
+        
+        This runs asynchronously in the background without blocking speech.
+        
+        Args:
+            text: The text to classify
+        """
+        try:
+            # Classify emotion asynchronously
+            emotion = await self.emotion_classifier.classify(text)
+            
+            # Display emotion on robot face
+            if self.mouth_controller:
+                self.mouth_controller.set_emotion(emotion)
+            else:
+                print(f"🎭 Emotion: {emotion} (mouth_controller not available)")
+                
+        except Exception as e:
+            print(f"⚠️  Error in emotion classification: {e}")
 
     async def _speak(self, text: str):
         if not self.tts._is_connected:
             await self.tts.connect()
         if not self.audio_playback._is_playing:
             self.audio_playback.start()
+        
+        # Classify and display emotion in background (non-blocking)
+        asyncio.create_task(self._classify_and_display_emotion(text))
 
         audio = self.tts.synthesize_stream(text)
         await self.audio_playback.play_stream(audio)

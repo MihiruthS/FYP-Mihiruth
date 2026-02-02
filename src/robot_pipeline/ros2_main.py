@@ -49,6 +49,9 @@ async def run_pipeline_with_ros2():
     # Link mouth controller to audio playback
     pipeline.audio_playback.mouth_controller = mouth_controller
     
+    # Link mouth controller to pipeline for emotion display
+    pipeline.mouth_controller = mouth_controller
+    
     # Start automatic blinking
     ros_node.start_blinking(mouth_controller)
     
