@@ -30,6 +30,7 @@ class RobotVoicePipeline:
         self.is_escorting = False  # Track if robot is currently escorting
         self.pending_escort = None  # Tracks location waiting for confirmation
         self.last_mentioned_location = None  # Track last location mentioned in conversation
+        self.displaying_emotions = False  # Flag to prevent duplicate emotion classification during displays
         
         # Location mapping for escort commands
         self.location_mapping = {
@@ -95,6 +96,17 @@ class RobotVoicePipeline:
         # Emotion classifier for facial expressions
         self.emotion_classifier = EmotionClassifier()
         self.mouth_controller = None  # Will be set by ROS2 bridge
+        
+        # Emotion keywords for command detection
+        self.emotion_keywords = {
+            "neutral": ["neutral", "calm", "normal"],
+            "joy": ["joy", "happy", "happiness", "smile", "joyful", "cheerful"],
+            "fear": ["fear", "scared", "afraid", "worried", "fearful"],
+            "disgust": ["disgust", "disgusted", "gross"],
+            "sadness": ["sad", "sadness", "unhappy", "disappointed"],
+            "anger": ["anger", "angry", "mad", "furious"],
+            "surprise": ["surprise", "surprised", "shocked", "amazed"]
+        }
 
         print("Robot Voice Pipeline Initialized")
 
@@ -105,6 +117,136 @@ class RobotVoicePipeline:
         text = text.lower().strip()
         text = text.translate(str.maketrans('', '', string.punctuation))
         return text
+    
+    def _detect_emotion_display_request(self, text: str) -> dict:
+        """
+        Detect if user is asking to display an emotion.
+        
+        Returns:
+            dict with 'is_request', 'emotions', 'show_all' keys
+        """
+        text_lower = text.lower()
+        
+        # Trigger phrases for showing emotions
+        show_triggers = [
+            "show me", "can you show", "display", "demonstrate",
+            "let me see", "i want to see", "show your"
+        ]
+        
+        # Check if this is an emotion display request
+        is_request = any(trigger in text_lower for trigger in show_triggers)
+        
+        # Also check for direct emotion face requests
+        face_triggers = ["face", "expression", "emotion"]
+        if any(trigger in text_lower for trigger in face_triggers):
+            is_request = True
+        
+        # Check for questions asking what/how emotions look like
+        look_like_patterns = [
+            "how does", "what does", "how do", "what do",
+            "look like", "looks like"
+        ]
+        if any(pattern in text_lower for pattern in look_like_patterns):
+            # Check if an emotion is mentioned
+            for emotion, keywords in self.emotion_keywords.items():
+                if any(keyword in text_lower for keyword in keywords):
+                    is_request = True
+                    break
+        
+        if not is_request:
+            return {"is_request": False, "emotions": [], "show_all": False}
+        
+        # Check for "all emotions" or "range of emotions"
+        show_all = any(phrase in text_lower for phrase in [
+            "all emotion", "range of emotion", "all expression",
+            "different emotion", "every emotion", "each emotion"
+        ])
+        
+        # Find which emotions are mentioned
+        mentioned_emotions = []
+        for emotion, keywords in self.emotion_keywords.items():
+            if any(keyword in text_lower for keyword in keywords):
+                mentioned_emotions.append(emotion)
+        
+        return {
+            "is_request": True,
+            "emotions": mentioned_emotions,
+            "show_all": show_all
+        }
+    
+    async def _display_emotions(self, emotions: list, show_all: bool = False):
+        """
+        Display requested emotions on the robot's face.
+        
+        Args:
+            emotions: List of emotion names to display
+            show_all: If True, cycle through all emotions
+        """
+        if not self.mouth_controller:
+            await self._speak("I don't have access to my face controls right now.")
+            return
+        
+        # Set flag to prevent duplicate emotion classification
+        self.displaying_emotions = True
+        
+        if show_all:
+            # Show all emotions in sequence
+            all_emotions = ["neutral", "joy", "surprise", "sadness", "anger", "fear", "disgust"]
+            
+            # Natural phrases for each emotion
+            emotion_phrases = {
+                "neutral": "This is my neutral face",
+                "joy": "This is me being happy",
+                "surprise": "This is me surprised",
+                "sadness": "This is a sad face",
+                "anger": "This is me angry",
+                "fear": "This is me scared",
+                "disgust": "This is me showing disgust"
+            }
+            
+            await self._speak("Let me show you all my emotions.")
+            await asyncio.sleep(0.5)
+            
+            for emotion in all_emotions:
+                print(f"Displaying: {emotion}")
+                self.mouth_controller.set_emotion(emotion)
+                phrase = emotion_phrases.get(emotion, f"This is {emotion}")
+                await self._speak(phrase)
+                await asyncio.sleep(1.5)  # Hold each emotion for 1.5 seconds before moving to next
+                
+            # Return to neutral
+            self.mouth_controller.set_emotion("neutral")
+            
+            # Closing statement
+            await self._speak("Those are the emotions that I have for now.")
+            
+        elif emotions:
+            # Show specific requested emotion(s)
+            if len(emotions) == 1:
+                emotion = emotions[0]
+                self.mouth_controller.set_emotion(emotion)
+                emotion_name = emotion.replace("_", " ")
+                await self._speak(f"Here is my {emotion_name} face.")
+            else:
+                # Multiple emotions requested
+                await self._speak("Let me show you those emotions.")
+                await asyncio.sleep(0.5)
+                
+                for emotion in emotions:
+                    emotion_name = emotion.replace("_", " ")
+                    print(f"Displaying: {emotion}")
+                    self.mouth_controller.set_emotion(emotion)
+                    await self._speak(f"{emotion_name}")
+                    await asyncio.sleep(1.0)
+                
+                # Return to neutral
+                self.mouth_controller.set_emotion("neutral")
+        else:
+            # No specific emotion mentioned - show all
+            await self._display_emotions([], show_all=True)
+        
+        # Clear flag after display is complete
+        self.displaying_emotions = False
     
     def _check_escort_request(self, response: str):
         """Check if response is asking for escort confirmation."""
@@ -248,6 +390,16 @@ class RobotVoicePipeline:
             if self.pending_escort and not is_short_response:
                 print(f"⚠️  Clearing stale escort state: {self.pending_escort} (new query received)")
                 self.pending_escort = None
+            
+            # Check for emotion display requests
+            emotion_request = self._detect_emotion_display_request(transcript)
+            if emotion_request["is_request"]:
+                print(f"🎭 Emotion display request detected")
+                await self._display_emotions(
+                    emotion_request["emotions"], 
+                    emotion_request["show_all"]
+                )
+                return True
 
             # Smart sleep word detection - only sleep if it's clearly a goodbye
             # Not if "thank you" is part of a longer sentence with a question
@@ -368,7 +520,9 @@ class RobotVoicePipeline:
             self.audio_playback.start()
         
         # Classify and display emotion in background (non-blocking)
-        asyncio.create_task(self._classify_and_display_emotion(text))
+        # Skip if we're already displaying emotions to avoid duplicates
+        if not self.displaying_emotions:
+            asyncio.create_task(self._classify_and_display_emotion(text))
 
         audio = self.tts.synthesize_stream(text)
         await self.audio_playback.play_stream(audio)

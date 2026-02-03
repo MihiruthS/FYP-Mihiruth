@@ -160,7 +160,33 @@ mouth_controller = MouthController(ros_node=ros_node)
 mouth_controller.set_emotion("joy")  # Display joy on face
 ```
 
-## 🌟 Benefits
+## � Displaying Emotions on Command
+
+The robot can now display emotions when asked:
+
+**Show all emotions:**
+- "Can you show me your range of emotions?"
+- "Show me all your emotions"
+- "Display all your expressions"
+
+**Show specific emotions:**
+- "Can you show me a happy face?"
+- "Show me anger"
+- "Display the sadness emotion"
+- "Let me see surprise"
+
+**View command examples:**
+```bash
+python scripts/show_emotion_commands.py
+```
+
+The robot will:
+1. Detect emotion display requests
+2. Set the facial expression
+3. Announce the emotion
+4. Publish to `/current_emotion` topic
+
+## �🌟 Benefits
 
 ✅ No latency added to speech pipeline
 ✅ Accurate AI-based emotion detection  
