@@ -31,6 +31,7 @@ class RobotVoicePipeline:
         self.pending_escort = None  # Tracks location waiting for confirmation
         self.last_mentioned_location = None  # Track last location mentioned in conversation
         self.displaying_emotions = False  # Flag to prevent duplicate emotion classification during displays
+        self.active_users = []  # List of currently visible users from camera
         
         # Location mapping for escort commands
         self.location_mapping = {
@@ -306,6 +307,39 @@ class RobotVoicePipeline:
             return True
         
         return False
+    
+    def get_active_users_info(self) -> str:
+        """Get formatted string of active users for context."""
+        if not self.active_users:
+            return "No users currently visible in camera."
+        
+        users_list = []
+        for person in self.active_users:
+            user_info = f"{person.name} (ID: {person.id})"
+            if person.hor_angle or person.ver_angle:
+                user_info += f" at angle (horizontal: {person.hor_angle}°, vertical: {person.ver_angle}°)"
+            users_list.append(user_info)
+        
+        return "Currently visible users: " + ", ".join(users_list)
+    
+    def get_user_by_name(self, name: str):
+        """Get user object by name (case-insensitive)."""
+        name_lower = name.lower()
+        for person in self.active_users:
+            if person.name.lower() == name_lower:
+                return person
+        return None
+    
+    def _get_personalized_greeting(self) -> str:
+        """Get greeting message, personalized if user is visible in camera."""
+        if self.active_users and len(self.active_users) > 0:
+            # Get first visible user's name
+            first_user = self.active_users[0]
+            name = first_user.name.capitalize()
+            return f"Hello {name}, how can I help you today?"
+        else:
+            # Default greeting if no users visible
+            return "Hello! How can I help you?"
 
     async def listen_for_wake_word(self) -> bool:
         print("\nSleeping... Say 'Hey Quanta'")
@@ -331,7 +365,9 @@ class RobotVoicePipeline:
 
             if any(w in text for w in self.wake_words):
                 self.is_awake = True
-                await self._speak("Hello! How can I help you?")
+                # Greet with user's name if available from camera
+                greeting = self._get_personalized_greeting()
+                await self._speak(greeting)
                 return True
 
             # Also check original text for sleep words (with punctuation)
@@ -445,7 +481,10 @@ class RobotVoicePipeline:
         # Start emotion classification in background (non-blocking)
         emotion_task = None
         
-        async for chunk in self.agent.think_stream(user_text):
+        # Get active users info for context
+        active_users_info = self.get_active_users_info()
+        
+        async for chunk in self.agent.think_stream(user_text, active_users_info=active_users_info):
             buffer += chunk
             full_response += chunk
             

@@ -39,8 +39,21 @@ python scripts/init_database.py
 
 ### 3. Run the Pipeline
 
+**Option 1: Quick Start with Launcher Script (Recommended)**
 ```bash
-# Start voice interaction
+# Automatically handles all setup and sourcing
+./start_robot.sh
+```
+
+**Option 2: Manual Start**
+```bash
+# Source ROS2 workspace for camera integration
+source /home/quanta/Desktop/Head-Code-Old/receptionist-3.0-head/install/setup.zsh
+
+# Start voice interaction with ROS2
+python src/robot_pipeline/ros2_main.py
+
+# OR for standalone mode (no ROS2)
 python main.py
 ```
 
@@ -76,6 +89,10 @@ robot-voice-pipeline/
 - ✅ High-quality speech synthesis
 - ✅ Department information & guidance
 - ✅ Escort services to locations
+- ✅ **Camera-based user detection & identification by name**
+- ✅ **Automatic personalized greetings**
+- ✅ **ROS2 integration for robot control**
+- ✅ **Facial emotion expressions**
 
 ## 🛠️ Usage
 
@@ -105,9 +122,12 @@ python scripts/test_rag.py
 
 ## 📚 Documentation
 
+- [Camera Integration](CAMERA_INTEGRATION_SUMMARY.md) - **NEW!** User detection & identification
+- [Camera Integration Guide](docs/CAMERA_INTEGRATION.md) - Detailed API reference
 - [RAG Guide](docs/RAG_GUIDE.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Integration Summary](docs/RAG_INTEGRATION_SUMMARY.md)
+- [Emotion System](docs/EMOTION_SYSTEM.md)
 
 ## 🐛 Troubleshooting
 

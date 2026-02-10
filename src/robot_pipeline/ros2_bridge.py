@@ -7,6 +7,7 @@ Publishes escort destination locations and motor positions to ROS2 topics.
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import String, Int32MultiArray, Bool
+from custom_interfaces.msg import PeopleArray, People
 import random
 import time
 
@@ -23,6 +24,7 @@ class VoicePipelineNode(Node):
     
     Subscribers:
         /arrived (Bool): Notification when robot arrives at destination
+        /active_users (PeopleArray): Active users detected by camera
     """
     
     def __init__(self, pipeline):
@@ -33,6 +35,10 @@ class VoicePipelineNode(Node):
         # Track escorting state
         self.is_escorting = False
         self.current_destination = None
+        
+        # Track active users from camera
+        self.active_users = {}  # id -> People object
+        self.greeted_users = set()  # Track users we've already greeted
         
         # Publishers
         self.location_pub = self.create_publisher(
@@ -55,6 +61,12 @@ class VoicePipelineNode(Node):
             self.arrived_callback,
             10
         )
+        self.active_users_sub = self.create_subscription(
+            PeopleArray,
+            '/active_users',
+            self.active_users_callback,
+            10
+        )
         
         # Blinking timer - will be started after mouth_controller is set
         self.blink_timer = None
@@ -67,6 +79,7 @@ class VoicePipelineNode(Node):
         self.get_logger().info('  - /current_emotion')
         self.get_logger().info('Subscribing to:')
         self.get_logger().info('  - /arrived')
+        self.get_logger().info('  - /active_users')
     
     def publish_location(self, location: str):
         """Publish escort destination location and pause conversation."""
@@ -129,6 +142,45 @@ class VoicePipelineNode(Node):
                 self.pipeline.is_escorting = False
                 self.current_destination = None
                 self.get_logger().info('⚠️ Could not announce arrival - pipeline loop not available')
+    
+    def active_users_callback(self, msg: PeopleArray):
+        """Handle active users from camera feed."""
+        # Update active users
+        current_user_ids = set()
+        
+        for person in msg.data:
+            current_user_ids.add(person.id)
+            self.active_users[person.id] = person
+            
+            # Track new users (no automatic greeting)
+            if person.id not in self.greeted_users and person.name:
+                self.greeted_users.add(person.id)
+                # No greeting here - will greet on wake word instead
+                self.get_logger().info(f'👋 New user detected: {person.name} (ID: {person.id})')
+        
+        # Remove users no longer in frame
+        users_to_remove = [uid for uid in self.active_users.keys() if uid not in current_user_ids]
+        for uid in users_to_remove:
+            removed_user = self.active_users.pop(uid)
+            self.greeted_users.discard(uid)
+            self.get_logger().info(f'👋 User left: {removed_user.name} (ID: {uid})')
+        
+        # Update pipeline with current users
+        self.pipeline.active_users = list(self.active_users.values())
+    
+    def _greet_user(self, person: People):
+        """Greet a newly detected user."""
+        greeting = f"Hello {person.name}! Nice to see you."
+        
+        if hasattr(self.pipeline, '_loop') and self.pipeline._loop:
+            # Schedule the speak task in the pipeline's event loop
+            asyncio = __import__('asyncio')
+            asyncio.run_coroutine_threadsafe(
+                self.pipeline._speak(greeting),
+                self.pipeline._loop
+            )
+        else:
+            self.get_logger().warn(f'⚠️ Could not greet user - pipeline loop not available')
     
     def start_blinking(self, mouth_controller):
         """Start automatic blinking timer."""

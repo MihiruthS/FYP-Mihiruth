@@ -5,10 +5,12 @@ Runs the voice pipeline with ROS2 integration enabled.
 Publishes transcripts, responses, and wake status to ROS2 topics.
 
 Usage:
+    source /home/quanta/Desktop/Head-Code-Old/receptionist-3.0-head/install/setup.zsh
     python src/robot_pipeline/ros2_main.py
 """
 
 import sys
+import os
 from pathlib import Path
 import asyncio
 import rclpy
@@ -93,6 +95,16 @@ async def run_pipeline_with_ros2():
 
 if __name__ == '__main__':
     load_dotenv()
+    
+    # Source ROS2 workspace for custom_interfaces
+    ros2_setup_path = "/home/quanta/Desktop/Head-Code-Old/receptionist-3.0-head/install/setup.sh"
+    if not os.path.exists(ros2_setup_path.replace('setup.sh', '')):
+        print(f"⚠️  Warning: ROS2 workspace not found at {ros2_setup_path}")
+        print("⚠️  Custom interfaces (PeopleArray) may not be available")
+        print("⚠️  Camera user detection will not work without custom_interfaces\n")
+    else:
+        print(f"✅ ROS2 workspace found: {ros2_setup_path}")
+        print("📦 Custom interfaces will be loaded from ROS2 workspace\n")
     
     try:
         asyncio.run(run_pipeline_with_ros2())

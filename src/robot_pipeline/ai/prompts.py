@@ -21,7 +21,7 @@ IMPORTANT RULES:
 - Only say you don't know if the information is truly not in the retrieved context
 """
     
-    def _base_prompt(self, user, user_input, chat_history, instructions, context):
+    def _base_prompt(self, user, user_input, chat_history, instructions, context, active_users_info=""):
         """Base prompt with robot role, environment, rules, and optional RAG context."""
         
         context_section = ""
@@ -48,12 +48,26 @@ Use it to answer the user's question directly and confidently.
 Extract the relevant details and provide a clear answer.
 """
         
+        # Add active users section if available
+        users_section = ""
+        if active_users_info and active_users_info.strip():
+            users_section = f"""
+===== CAMERA INFORMATION =====
+{active_users_info}
+===============================
+
+You can see the people listed above through the camera. 
+If someone asks who you can see or who is there, refer to the names above.
+You can address people by their names if relevant to the conversation.
+"""
+        
         return f"""
 {self.robot_profile}
 
 CURRENT SITUATION:
 You are at the reception area.
 You can see and hear visitors clearly.
+{users_section}
 You can escort visitors ONLY to:
 - Department Office
 - Computer Lab

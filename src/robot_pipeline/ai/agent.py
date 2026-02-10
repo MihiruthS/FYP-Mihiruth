@@ -156,8 +156,8 @@ class AIAgent:
         query = ' '.join(query.split())  # Normalize whitespace
         return query
     
-    def _build_system_prompt(self, user_input: str, skip_rag: bool = False, web_context: str = "") -> str:
-        """Build dynamic system prompt using PromptGenerator, RAG context, and web search."""
+    def _build_system_prompt(self, user_input: str, skip_rag: bool = False, web_context: str = "", active_users_info: str = "") -> str:
+        """Build dynamic system prompt using PromptGenerator, RAG context, web search, and active users."""
         # Retrieve relevant context from RAG if enabled
         rag_context = ""
         if not skip_rag and self.use_rag and self.rag_database:
@@ -204,7 +204,8 @@ class AIAgent:
                 user_input=user_input,
                 chat_history=chat_history,
                 instructions="",
-                context=context
+                context=context,
+                active_users_info=active_users_info
             )
         else:
             # Default prompt with context
@@ -217,13 +218,14 @@ converted to speech."""
                 return f"{base_prompt}\n\n{context}"
             return base_prompt
     
-    async def think(self, user_input: str) -> str:
+    async def think(self, user_input: str, active_users_info: str = "") -> str:
         """
         Process user input and generate a response.
         Uses FAQ → RAG → LLM pipeline for optimal speed and accuracy.
         
         Args:
             user_input: The user's query or statement
+            active_users_info: Information about currently visible users
         
         Returns:
             The AI agent's response text
@@ -257,7 +259,7 @@ converted to speech."""
             print(f"Simple query detected - Skipping RAG for faster response")
         
         # Step 4: Build system prompt (with RAG and/or web search)
-        system_prompt = self._build_system_prompt(user_input, skip_rag=not needs_rag, web_context=web_context)
+        system_prompt = self._build_system_prompt(user_input, skip_rag=not needs_rag, web_context=web_context, active_users_info=active_users_info)
         
         # Build messages for the LLM
         messages = [SystemMessage(content=system_prompt)]
@@ -290,13 +292,14 @@ converted to speech."""
             print(f"Error generating response: {e}")
             return "I'm sorry, I encountered an error processing your request."
     
-    async def think_stream(self, user_input: str):
+    async def think_stream(self, user_input: str, active_users_info: str = ""):
         """
         Process user input and stream the response token by token.
         Uses FAQ → RAG → LLM pipeline for optimal speed.
         
         Args:
             user_input: The user's query or statement
+            active_users_info: Information about currently visible users
         
         Yields:
             Response text chunks as they are generated
@@ -340,7 +343,7 @@ converted to speech."""
             print(f"Simple query detected - Skipping RAG for faster response")
         
         # Step 4: Build system prompt (with RAG and/or web search)
-        system_prompt = self._build_system_prompt(user_input, skip_rag=not needs_rag, web_context=web_context)
+        system_prompt = self._build_system_prompt(user_input, skip_rag=not needs_rag, web_context=web_context, active_users_info=active_users_info)
         
         # Build messages
         messages = [SystemMessage(content=system_prompt)]
