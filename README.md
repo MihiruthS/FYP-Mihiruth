@@ -90,7 +90,8 @@ robot-voice-pipeline/
 - ✅ Department information & guidance
 - ✅ Escort services to locations
 - ✅ **Camera-based user detection & identification by name**
-- ✅ **Automatic personalized greetings**
+- ✅ **Personalized greetings on wake word**
+- ✅ **User-specific conversation histories**
 - ✅ **ROS2 integration for robot control**
 - ✅ **Facial emotion expressions**
 
@@ -122,7 +123,8 @@ python scripts/test_rag.py
 
 ## 📚 Documentation
 
-- [Camera Integration](CAMERA_INTEGRATION_SUMMARY.md) - **NEW!** User detection & identification
+- [Camera Integration](CAMERA_INTEGRATION_SUMMARY.md) - User detection & identification
+- [User-Specific Histories](docs/USER_HISTORY.md) - **NEW!** Separate context per user
 - [Camera Integration Guide](docs/CAMERA_INTEGRATION.md) - Detailed API reference
 - [RAG Guide](docs/RAG_GUIDE.md)
 - [Architecture](docs/ARCHITECTURE.md)

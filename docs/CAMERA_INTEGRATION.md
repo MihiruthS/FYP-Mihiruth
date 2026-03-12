@@ -26,6 +26,14 @@ The robot knows who is currently visible and can:
 - Automatically updates when users enter or leave the frame
 - Logs all user entry/exit events
 
+### 5. **User-Specific Chat Histories**
+- Each user has their own conversation context **keyed by name**
+- When a user appears, their previous conversation history is restored by name
+- Camera ID changes don't affect history (names are used, not IDs)
+- When they leave, their history is saved
+- No cross-contamination between different users' conversations
+- Robot remembers context when users return, even with different camera IDs
+
 ## ROS2 Integration
 
 ### Topic: `/active_users`
@@ -142,9 +150,46 @@ User: "Tell nidula about the computer lab"
 Robot: "Sure! The computer lab is located on the second floor..."
 ```
 
+**Scenario 5: User-Specific Context Preservation (With ID Changes)**
+```
+[Mihiruth enters (ID: 5), asks questions]
+User (Mihiruth): "Where is the computer lab?"
+Robot: "The computer lab is on the second floor..."
+[History saved to 'mihiruth']
+
+[Mihiruth leaves, Nidula enters (ID: 6)]
+User (Nidula): "What is your name?"
+Robot: "My name is Quanta..."
+[History saved to 'nidula']
+
+[Nidula leaves, Mihiruth returns (ID: 9 - NEW ID!)]
+User (Mihiruth): "Where was that lab again?"
+Robot: "The computer lab is on the second floor..." 
+[Robot found 'mihiruth' history despite ID change: 5 → 9]
+```
+
 ## API Reference
 
 ### Pipeline Methods
+
+#### `_update_active_user()`
+Updates the active user based on camera data and switches conversation history.
+
+- Monitors `active_users` list
+- Extracts user's **name** from camera data
+- Switches to that user's conversation history (keyed by name, not ID)
+- Automatically saves/restores user-specific chat histories
+- Handles camera ID changes gracefully (uses name for matching)
+- Falls back to generic history when no users visible
+
+**Example:**
+```python
+# Called automatically before processing queries
+pipeline._update_active_user()
+# Logs: "Active user changed to: mihiruth (ID: 9)"
+# Logs: "Switched to user 'mihiruth', history length: 3"
+# Note: History found by name even if ID changed!
+```
 
 #### `get_active_users_info() -> str`
 Returns formatted string of currently visible users.
@@ -172,6 +217,34 @@ Retrieves user object by name (case-insensitive).
 user = pipeline.get_user_by_name("mihiruth")
 if user:
     print(f"User ID: {user.id}, Angle: {user.hor_angle}°")
+```
+
+### AI Agent Methods
+
+#### `set_active_user(user_name)`
+Switches to a specific user's conversation history by name.
+
+**Parameters:**
+- `user_name`: User name to switch to (string), or `None` for generic history
+
+**Behavior:**
+- Saves current user's conversation history (by name)
+- Loads specified user's history (or creates new empty history)
+- Updates `current_user_name`
+- Uses name matching, so ID changes don't matter
+
+**Example:**
+```python
+agent.set_active_user('mihiruth')  # Switch to mihiruth's history
+agent.set_active_user(None)        # Switch to generic history
+```
+
+#### `clear_all_histories()`
+Clears all stored conversation histories.
+
+**Example:**
+```python
+agent.clear_all_histories()  # Start fresh session
 ```
 
 ### ROS2 Bridge Methods

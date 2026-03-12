@@ -191,8 +191,10 @@ The integration is complete and ready to use. To activate:
 
 ✅ **Personalized Interaction**: Robot addresses users by name  
 ✅ **Context Awareness**: AI knows who is present during conversations  
-✅ **Automatic Greeting**: No manual trigger needed  
+✅ **Silent Tracking**: No interruptions when users enter/leave  
 ✅ **Multi-User Support**: Handles multiple people simultaneously  
+✅ **User-Specific Histories**: Maintains separate conversation context for each user  
+✅ **Context Preservation**: Remembers previous conversations when users return  
 ✅ **Seamless Integration**: Works with existing voice pipeline  
 
 ---

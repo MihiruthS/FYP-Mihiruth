@@ -10,7 +10,6 @@ import asyncio
 from typing import AsyncIterator, Optional
 
 import pyaudio
-import audioop
 
 
 class AudioCapture:
@@ -21,7 +20,7 @@ class AudioCapture:
     - Sample rate: 16kHz
     - Channels: 1 (mono)
     - Sample width: 16-bit PCM
-    - Chunk size: 1024 frames (~64ms)
+    - Chunk size: 3200 frames (~200ms, optimized for USB mics)
     """
 
     def __init__(
@@ -29,18 +28,14 @@ class AudioCapture:
         sample_rate: int = 16000,
         channels: int = 1,
         chunk_size: int = 3200,  # ~200ms (better for USB mics)
-        rms_threshold: int = 150,  # Lower threshold for better sensitivity
-        max_queue_size: int = 5,   # Prevent latency buildup
         device_index: Optional[int] = None,  # Specific device (e.g., ReSpeaker)
     ):
         self.sample_rate = sample_rate
         self.channels = channels
         self.chunk_size = chunk_size
-        self.rms_threshold = rms_threshold
         self.device_index = device_index
 
         self.format = pyaudio.paInt16  # 16-bit PCM
-        self.sample_width = 2  # bytes
 
         self._audio: Optional[pyaudio.PyAudio] = None
         self._stream: Optional[pyaudio.Stream] = None
@@ -56,7 +51,7 @@ class AudioCapture:
             return
 
         self._loop = asyncio.get_event_loop()
-        self._audio_queue = asyncio.Queue(maxsize=5)
+        self._audio_queue = asyncio.Queue(maxsize=10)  # Increased to prevent buffer underruns
 
         self._audio = pyaudio.PyAudio()
         
@@ -119,13 +114,11 @@ class AudioCapture:
         return None
 
     def _audio_callback(self, in_data, frame_count, time_info, status):
+        """Streamlined callback - let AssemblyAI's VAD handle silence detection."""
         if not self._is_recording or not self._audio_queue:
             return (None, pyaudio.paContinue)
 
-        rms = audioop.rms(in_data, self.sample_width)
-        if rms < self.rms_threshold:
-            return (None, pyaudio.paContinue)
-
+        # Removed RMS filtering - AssemblyAI handles silence detection
         def _safe_put():
             try:
                 self._audio_queue.put_nowait(in_data)

@@ -96,7 +96,10 @@ class AIAgent:
                 print(f"Web search initialization failed: {e}")
                 self.use_web_search = False
         
-        self.conversation_history = []
+        # User-specific conversation histories (keyed by name, not ID)
+        self.conversation_histories = {}  # user_name -> conversation history
+        self.current_user_name = None  # Currently active user name
+        self.conversation_history = []  # Active conversation history (for compatibility)
         
         # Enhanced LRU cache for RAG contexts (speeds up repeated queries)
         self._rag_cache = OrderedDict()
@@ -121,6 +124,29 @@ class AIAgent:
             "computer lab", "conference", "building", "room", "floor",
             "club", "student", "admission", "enroll", "study", "learn"
         ]
+    
+    def set_active_user(self, user_name):
+        """Switch to a specific user's conversation history by name."""
+        if user_name != self.current_user_name:
+            # Save current history if there was a user
+            if self.current_user_name is not None:
+                self.conversation_histories[self.current_user_name] = self.conversation_history.copy()
+            
+            # Load new user's history or create empty one
+            self.current_user_name = user_name
+            if user_name is None:
+                self.conversation_history = []
+            else:
+                self.conversation_history = self.conversation_histories.get(user_name, []).copy()
+            
+            print(f"Switched to user '{user_name}', history length: {len(self.conversation_history)}")
+    
+    def clear_all_histories(self):
+        """Clear all conversation histories (for new session)."""
+        self.conversation_histories.clear()
+        self.conversation_history = []
+        self.current_user_name = None
+        print("All conversation histories cleared")
     
     def _needs_department_knowledge(self, query: str) -> bool:
         """

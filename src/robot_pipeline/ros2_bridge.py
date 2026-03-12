@@ -6,7 +6,7 @@ Publishes escort destination locations and motor positions to ROS2 topics.
 
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import String, Int32MultiArray, Bool
+from std_msgs.msg import String, Int32MultiArray, Bool, Int32
 from custom_interfaces.msg import PeopleArray, People
 import random
 import time
@@ -21,6 +21,7 @@ class VoicePipelineNode(Node):
         /motor_pos (Int32MultiArray): Motor positions [channel, position]
         /motor_speed (Int32MultiArray): Motor speeds [channel, speed]
         /current_emotion (String): Current emotion being displayed
+        /doa (Int32): Direction of Arrival in degrees (0-40)
     
     Subscribers:
         /arrived (Bool): Notification when robot arrives at destination
@@ -39,6 +40,8 @@ class VoicePipelineNode(Node):
         # Track active users from camera
         self.active_users = {}  # id -> People object
         self.greeted_users = set()  # Track users we've already greeted
+        self.unknown_users = {}  # id -> People object for users named 'Unknown'
+        self.learning_user_id = None  # ID of user we're currently learning about
         
         # Publishers
         self.location_pub = self.create_publisher(
@@ -52,6 +55,12 @@ class VoicePipelineNode(Node):
         )
         self.emotion_pub = self.create_publisher(
             String, '/current_emotion', 10
+        )
+        self.new_user_pub = self.create_publisher(
+            People, '/new_user', 10
+        )
+        self.doa_pub = self.create_publisher(
+            Int32, '/doa', 10
         )
         
         # Subscribers
@@ -77,6 +86,8 @@ class VoicePipelineNode(Node):
         self.get_logger().info('  - /motor_pos')
         self.get_logger().info('  - /motor_speed')
         self.get_logger().info('  - /current_emotion')
+        self.get_logger().info('  - /new_user')
+        self.get_logger().info('  - /doa')
         self.get_logger().info('Subscribing to:')
         self.get_logger().info('  - /arrived')
         self.get_logger().info('  - /active_users')
@@ -110,6 +121,17 @@ class VoicePipelineNode(Node):
         msg.data = emotion
         self.emotion_pub.publish(msg)
         self.get_logger().info(f'🎭 Emotion: {emotion}')
+    
+    def publish_doa(self, angle: int):
+        """Publish Direction of Arrival angle in robot reference frame (-77° to +77°).
+        
+        Args:
+            angle: Mapped DOA angle (-77 to +77, where 0 is center)
+        """
+        msg = Int32()
+        msg.data = angle
+        self.doa_pub.publish(msg)
+        self.get_logger().info(f'🎯 DOA published: {angle}°')
     
     def arrived_callback(self, msg: Bool):
         """Handle arrival notification from /arrived topic."""
@@ -152,6 +174,12 @@ class VoicePipelineNode(Node):
             current_user_ids.add(person.id)
             self.active_users[person.id] = person
             
+            # Check for unknown users
+            if person.name and person.name.lower() == 'unknown':
+                if person.id not in self.unknown_users:
+                    self.unknown_users[person.id] = person
+                    self.get_logger().info(f'👤 Unknown user detected (ID: {person.id})')
+            
             # Track new users (no automatic greeting)
             if person.id not in self.greeted_users and person.name:
                 self.greeted_users.add(person.id)
@@ -167,6 +195,30 @@ class VoicePipelineNode(Node):
         
         # Update pipeline with current users
         self.pipeline.active_users = list(self.active_users.values())
+    
+    def publish_new_user(self, user_id: int, name: str):
+        """Publish newly learned user name to /new_user topic."""
+        if user_id in self.active_users:
+            person = self.active_users[user_id]
+            # Create new People message with learned name
+            msg = People()
+            msg.id = person.id
+            msg.name = name
+            msg.hor_angle = person.hor_angle
+            msg.ver_angle = person.ver_angle
+            msg.missed_frames = person.missed_frames
+            
+            self.new_user_pub.publish(msg)
+            self.get_logger().info(f'📤 Published learned name: {name} (ID: {user_id})')
+            
+            # Update local tracking
+            person.name = name
+            self.active_users[user_id] = person
+            self.unknown_users.pop(user_id, None)
+            self.learning_user_id = None
+            
+            # Update pipeline
+            self.pipeline.active_users = list(self.active_users.values())
     
     def _greet_user(self, person: People):
         """Greet a newly detected user."""

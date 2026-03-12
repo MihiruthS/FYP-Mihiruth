@@ -9,6 +9,8 @@ import os
 import sys
 from pathlib import Path
 from dotenv import load_dotenv
+import usb.core
+import usb.util
 
 from robot_pipeline.audio.capture import AudioCapture
 from robot_pipeline.audio.playback import AudioPlayback
@@ -19,6 +21,15 @@ from robot_pipeline.ai.prompts import PromptGenerator
 from robot_pipeline.ai.rag_database import RAGDatabase
 from robot_pipeline.ai.faq_database import FAQDatabase
 from robot_pipeline.emotion_classifier import EmotionClassifier
+
+# Add usb_4_mic_array to path for DOA detection
+sys.path.insert(0, str(Path(__file__).parent.parent.parent / "usb_4_mic_array"))
+try:
+    from tuning import Tuning
+    DOA_AVAILABLE = True
+except ImportError:
+    DOA_AVAILABLE = False
+    print("⚠️  DOA (Direction of Arrival) detection not available - tuning module not found")
 
 
 PROJECT_ROOT = Path(__file__).parent.parent.parent.absolute()
@@ -32,6 +43,8 @@ class RobotVoicePipeline:
         self.last_mentioned_location = None  # Track last location mentioned in conversation
         self.displaying_emotions = False  # Flag to prevent duplicate emotion classification during displays
         self.active_users = []  # List of currently visible users from camera
+        self.current_user_name = None  # Currently active user name for chat history
+        self.pending_name_learning = None  # ID of unknown user we're asking name for
         
         # Location mapping for escort commands
         self.location_mapping = {
@@ -98,6 +111,10 @@ class RobotVoicePipeline:
         self.emotion_classifier = EmotionClassifier()
         self.mouth_controller = None  # Will be set by ROS2 bridge
         
+        # Direction of Arrival (DOA) detection
+        self.doa_device = None
+        self._init_doa()
+        
         # Emotion keywords for command detection
         self.emotion_keywords = {
             "neutral": ["neutral", "calm", "normal"],
@@ -110,6 +127,62 @@ class RobotVoicePipeline:
         }
 
         print("Robot Voice Pipeline Initialized")
+
+    def _init_doa(self):
+        """Initialize Direction of Arrival (DOA) detection using ReSpeaker 4-mic array."""
+        if not DOA_AVAILABLE:
+            print("⚠️  DOA detection not available")
+            return
+        
+        try:
+            # Find ReSpeaker USB device (Vendor ID: 0x2886, Product ID: 0x0018)
+            dev = usb.core.find(idVendor=0x2886, idProduct=0x0018)
+            if dev:
+                self.doa_device = Tuning(dev)
+                print("✅ DOA (Direction of Arrival) detection initialized")
+            else:
+                print("⚠️  ReSpeaker 4-mic array not found - DOA unavailable")
+        except Exception as e:
+            print(f"⚠️  Failed to initialize DOA: {e}")
+            self.doa_device = None
+    
+    def _print_doa(self):
+        """Print the current Direction of Arrival (DOA) angle and publish to ROS2 if within range.
+        
+        Maps ReSpeaker DOA to robot reference frame:
+        - < 103° → -77° (clamped to far left)
+        - 103° → -77° (far left)
+        - 180° → 0° (center)
+        - 257° → +77° (far right)
+        - > 257° → +77° (clamped to far right)
+        """
+        if self.doa_device:
+            try:
+                raw_doa = self.doa_device.direction
+                print(f"🎯 Direction of Arrival (raw): {raw_doa}°")
+                
+                # Map DOA to robot reference frame with clamping
+                if raw_doa < 103:
+                    # Clamp to far left
+                    mapped_doa = -77
+                    print(f"   → Mapped DOA: {mapped_doa}° (clamped to far left)")
+                elif raw_doa > 257:
+                    # Clamp to far right
+                    mapped_doa = 77
+                    print(f"   → Mapped DOA: {mapped_doa}° (clamped to far right)")
+                else:
+                    # Within range: 180° → 0°, 103° → -77°, 257° → +77°
+                    mapped_doa = raw_doa - 180
+                    print(f"   → Mapped DOA: {mapped_doa}°")
+                
+                # Publish to ROS2 if available
+                if hasattr(self, 'ros_node') and self.ros_node:
+                    self.ros_node.publish_doa(mapped_doa)
+                else:
+                    print(f"   ✓ DOA mapped and ready for publishing (ROS2 not enabled)")
+            except Exception as e:
+                print(f"⚠️  Failed to read DOA: {e}")
+        # Silently skip if DOA not available
 
     def _clean_text(self, text: str) -> str:
         """Remove punctuation and normalize text for matching."""
@@ -335,11 +408,77 @@ class RobotVoicePipeline:
         if self.active_users and len(self.active_users) > 0:
             # Get first visible user's name
             first_user = self.active_users[0]
+            
+            # Check if user is unknown
+            if first_user.name and first_user.name.lower() == 'unknown':
+                self.pending_name_learning = first_user.id
+                return "Hello! I don't think we've met before. May I know your name?"
+            
             name = first_user.name.capitalize()
             return f"Hello {name}, how can I help you today?"
         else:
             # Default greeting if no users visible
             return "Hello! How can I help you?"
+    
+    def _extract_name_from_response(self, text: str) -> str:
+        """Extract a person's name from their response."""
+        # Common patterns: "My name is X", "I'm X", "I am X", "Call me X", or just "X"
+        import re
+        
+        text_lower = text.lower()
+        
+        # Pattern 1: "my name is [name]"
+        match = re.search(r"my name is ([a-z]+)", text_lower)
+        if match:
+            return match.group(1)
+        
+        # Pattern 2: "i'm [name]" or "i am [name]"
+        match = re.search(r"i['']?m ([a-z]+)", text_lower)
+        if match:
+            return match.group(1)
+        
+        match = re.search(r"i am ([a-z]+)", text_lower)
+        if match:
+            return match.group(1)
+        
+        # Pattern 3: "call me [name]"
+        match = re.search(r"call me ([a-z]+)", text_lower)
+        if match:
+            return match.group(1)
+        
+        # Pattern 4: Single word (likely just the name)
+        words = text_lower.split()
+        if len(words) == 1 and words[0].isalpha():
+            return words[0]
+        
+        # Pattern 5: "it's [name]" or "this is [name]"
+        match = re.search(r"it['']?s ([a-z]+)", text_lower)
+        if match:
+            return match.group(1)
+        
+        match = re.search(r"this is ([a-z]+)", text_lower)
+        if match:
+            return match.group(1)
+        
+        return None
+    
+    def _update_active_user(self):
+        """Update active user based on camera data and switch conversation history."""
+        if self.active_users and len(self.active_users) > 0:
+            # Use first visible user's name as active user
+            first_user = self.active_users[0]
+            new_user_name = first_user.name.lower() if first_user.name else None
+            
+            if new_user_name and new_user_name != self.current_user_name:
+                self.current_user_name = new_user_name
+                self.agent.set_active_user(new_user_name)
+                print(f"Active user changed to: {first_user.name} (ID: {first_user.id})")
+        else:
+            # No users visible - use generic conversation
+            if self.current_user_name is not None:
+                self.current_user_name = None
+                self.agent.set_active_user(None)
+                print("No users visible - using generic conversation history")
 
     async def listen_for_wake_word(self) -> bool:
         print("\nSleeping... Say 'Hey Quanta'")
@@ -354,6 +493,9 @@ class RobotVoicePipeline:
                 transcript = text
                 stop_event.set()
                 print(f"Heard: {text}")
+                
+                # Print direction of arrival
+                self._print_doa()
 
             self.audio_capture.stop()
 
@@ -365,6 +507,8 @@ class RobotVoicePipeline:
 
             if any(w in text for w in self.wake_words):
                 self.is_awake = True
+                # Update active user before greeting
+                self._update_active_user()
                 # Greet with user's name if available from camera
                 greeting = self._get_personalized_greeting()
                 await self._speak(greeting)
@@ -392,11 +536,47 @@ class RobotVoicePipeline:
                 transcript = text
                 stop_event.set()
                 print(f"You said: {text}")
+                
+                # Print direction of arrival
+                self._print_doa()
 
             self.audio_capture.stop()
 
             if not transcript:
                 return True
+            
+            # Update active user based on who is currently visible
+            self._update_active_user()
+            
+            # Check if current user is unknown and we haven't asked for their name yet
+            if (self.active_users and len(self.active_users) > 0 and 
+                self.pending_name_learning is None):
+                first_user = self.active_users[0]
+                if first_user.name and first_user.name.lower() == 'unknown':
+                    # Unknown user is talking - ask for their name
+                    self.pending_name_learning = first_user.id
+                    await self._speak("I don't think we've met before. May I know your name?")
+                    return True
+            
+            # Check if we're learning a user's name
+            if self.pending_name_learning is not None:
+                learned_name = self._extract_name_from_response(transcript)
+                if learned_name:
+                    # Found a name! Publish it to /new_user
+                    if hasattr(self, 'ros_node'):
+                        self.ros_node.publish_new_user(self.pending_name_learning, learned_name)
+                        print(f"✅ Learned name: {learned_name} (ID: {self.pending_name_learning})")
+                        
+                        # Thank the user
+                        await self._speak(f"Nice to meet you, {learned_name.capitalize()}! How can I help you today?")
+                        self.pending_name_learning = None
+                        return True
+                    else:
+                        print("⚠️ Cannot publish new user - ROS node not available")
+                        self.pending_name_learning = None
+            
+            # Update active user based on who is currently visible
+            self._update_active_user()
             
             # Track location mentions in user queries
             transcript_lower = transcript.lower()
