@@ -8,6 +8,7 @@ Simplified version without complex event system - returns final transcripts only
 import asyncio
 import json
 import os
+import time
 from typing import AsyncIterator, Optional
 from urllib.parse import urlencode
 
@@ -28,14 +29,19 @@ class SpeechToText:
         api_key: Optional[str] = None,
         sample_rate: int = 16000,
         word_boost: Optional[list] = None,
+        post_final_check_seconds: float = 0.10,
     ):
         self.api_key = api_key or os.getenv("ASSEMBLYAI_API_KEY")
         if not self.api_key:
             raise ValueError("ASSEMBLYAI_API_KEY environment variable is required")
         
         self.sample_rate = sample_rate
+        self.post_final_check_seconds = post_final_check_seconds
         self._ws: Optional[WebSocketClientProtocol] = None
         self._is_connected = False
+        self._cooldown_until = 0.0
+        self._last_cooldown_notice = 0.0
+        self._cooldown_seconds = 8.0
         
         # Word boost for common terms to improve accuracy
         self.word_boost = [
@@ -60,6 +66,15 @@ class SpeechToText:
         """Establish WebSocket connection to AssemblyAI with enhanced parameters."""
         if self._is_connected:
             return
+
+        now = time.monotonic()
+        if now < self._cooldown_until:
+            # Avoid aggressive reconnect loops after policy violations.
+            if now - self._last_cooldown_notice > 2.0:
+                wait_for = self._cooldown_until - now
+                print(f"⏳ STT cooldown active after session-limit error. Retrying in {wait_for:.1f}s")
+                self._last_cooldown_notice = now
+            raise RuntimeError("STT cooldown active")
         
         print("Connecting to AssemblyAI STT...")
         
@@ -85,10 +100,28 @@ class SpeechToText:
             )
             self._is_connected = True
             print("✅ Connected to AssemblyAI STT")
+            self._cooldown_until = 0.0
         except Exception as e:
             print(f"❌ Failed to connect to AssemblyAI: {e}")
             print("   Check your internet connection and API key")
             raise
+
+    def _handle_connection_closed(self, e: websockets.exceptions.ConnectionClosed, source: str):
+        """Handle websocket close events and apply cooldown for policy violations."""
+        self._is_connected = False
+        self._ws = None
+
+        reason = getattr(e, "reason", "") or ""
+        code = getattr(e, "code", None)
+
+        if code == 1008 and "Too many concurrent sessions" in reason:
+            self._cooldown_until = time.monotonic() + self._cooldown_seconds
+            print(
+                f"⚠️  AssemblyAI session limit reached ({source}). "
+                f"Pausing STT reconnects for {self._cooldown_seconds:.0f}s"
+            )
+        else:
+            print(f"STT WebSocket connection closed ({source}): {e}")
     
     async def send_audio(self, audio_chunk: bytes):
         """Send audio chunk to AssemblyAI for transcription."""
@@ -146,8 +179,7 @@ class SpeechToText:
         except json.JSONDecodeError as e:
             print(f"JSON decode error: {e}")
         except websockets.exceptions.ConnectionClosed as e:
-            print(f"STT WebSocket connection closed: {e}")
-            self._is_connected = False
+            self._handle_connection_closed(e, source="receive")
         except Exception as e:
             print(f"Unexpected error in receive_transcript: {e}")
             import traceback
@@ -168,7 +200,16 @@ class SpeechToText:
         Yields:
             Final transcript strings
         """
-        await self.connect()
+        try:
+            await self.connect()
+        except RuntimeError as e:
+            # Cooldown path (e.g., too many concurrent sessions). Skip this turn silently.
+            if str(e) == "STT cooldown active":
+                return
+            raise
+        except Exception:
+            # Connection setup failed for this turn.
+            return
         
         # Background task to send audio
         audio_send_complete = asyncio.Event()
@@ -182,10 +223,14 @@ class SpeechToText:
                 print(f"Sent {chunk_count} audio chunks to STT")
                 # Signal end of audio to AssemblyAI
                 await self.send_termination()
+            except websockets.exceptions.ConnectionClosed as e:
+                self._handle_connection_closed(e, source="send")
+            except RuntimeError as e:
+                # Cooldown became active during send loop.
+                if str(e) != "STT cooldown active":
+                    print(f"Error sending audio: {e}")
             except Exception as e:
                 print(f"Error sending audio: {e}")
-                import traceback
-                traceback.print_exc()
             finally:
                 audio_send_complete.set()
         
@@ -210,8 +255,25 @@ class SpeechToText:
                     if transcript:
                         received_any = True
                         timeout_counter = 0
-                        yield transcript
-                        # After receiving a transcript, we're done
+
+                        # Fast path: if transcript already looks complete, return immediately.
+                        if transcript.rstrip().endswith((".", "!", "?")):
+                            yield transcript
+                            break
+
+                        # Low-latency refinement: wait briefly for a better finalized turn.
+                        final_transcript = transcript
+                        try:
+                            maybe_better = await asyncio.wait_for(
+                                self.receive_transcript(),
+                                timeout=self.post_final_check_seconds,
+                            )
+                            if maybe_better and len(maybe_better) >= len(final_transcript):
+                                final_transcript = maybe_better
+                        except asyncio.TimeoutError:
+                            pass
+
+                        yield final_transcript
                         break
                     
                 except asyncio.TimeoutError:
@@ -239,10 +301,10 @@ class SpeechToText:
     
     async def close(self):
         """Close the WebSocket connection."""
-        if self._ws and self._is_connected:
+        if self._ws:
             try:
                 await self._ws.close()
-            except:
+            except Exception:
                 pass
             finally:
                 self._ws = None

@@ -33,6 +33,8 @@ except ImportError:
 
 
 PROJECT_ROOT = Path(__file__).parent.parent.parent.absolute()
+DOA_INTERACTION_MIN = -70
+DOA_INTERACTION_MAX = 70
 
 
 class RobotVoicePipeline:
@@ -40,6 +42,7 @@ class RobotVoicePipeline:
         self.is_awake = False
         self.is_escorting = False  # Track if robot is currently escorting
         self.pending_escort = None  # Tracks location waiting for confirmation
+        self.pending_unsupported_escort = False  # Tracks unsupported escort confirmation prompts
         self.last_mentioned_location = None  # Track last location mentioned in conversation
         self.displaying_emotions = False  # Flag to prevent duplicate emotion classification during displays
         self.active_users = []  # List of currently visible users from camera
@@ -190,6 +193,16 @@ class RobotVoicePipeline:
                 self.last_mapped_doa = None
         # Silently skip if DOA not available
 
+    def _is_doa_within_interaction_range(self) -> bool:
+        """Return True when the latest mapped DOA is within the interaction range.
+
+        If DOA is unavailable, allow interaction so the pipeline can still operate.
+        """
+        if self.last_mapped_doa is None:
+            return True
+
+        return DOA_INTERACTION_MIN <= self.last_mapped_doa <= DOA_INTERACTION_MAX
+
     def _clean_text(self, text: str) -> str:
         """Remove punctuation and normalize text for matching."""
         import string
@@ -293,13 +306,16 @@ class RobotVoicePipeline:
                 self.mouth_controller.set_emotion(emotion)
                 phrase = emotion_phrases.get(emotion, f"This is {emotion}")
                 await self._speak(phrase)
-                await asyncio.sleep(1.5)  # Hold each emotion for 1.5 seconds before moving to next
+                await asyncio.sleep(1.8)  # Hold each emotion a bit longer before moving to next
                 
             # Return to neutral
             self.mouth_controller.set_emotion("neutral")
             
             # Closing statement
             await self._speak("Those are the emotions that I have for now.")
+
+            # Ensure final published/displayed emotion is neutral after closing speech.
+            self.mouth_controller.set_emotion("neutral")
             
         elif emotions:
             # Show specific requested emotion(s)
@@ -343,7 +359,9 @@ class RobotVoicePipeline:
             ("shall i" in response_lower and ("escort" in response_lower or "take" in response_lower)) or
             ("should i" in response_lower and ("escort" in response_lower or "take" in response_lower)) or
             ("want me to" in response_lower and ("escort" in response_lower or "take" in response_lower)) or
-            ("do you want" in response_lower and ("escort" in response_lower or "take" in response_lower))
+            ("do you want" in response_lower and ("escort" in response_lower or "take" in response_lower)) or
+            ("escort" in response_lower and "confirm" in response_lower) or
+            ("escort you" in response_lower and "there" in response_lower)
         )
         
         if is_escort_request:
@@ -360,10 +378,17 @@ class RobotVoicePipeline:
             
             if location_found:
                 self.pending_escort = location_found
+                self.pending_unsupported_escort = False
                 print(f"⏳ Escort pending confirmation: {location_found}")
-                return True
+                return "pending"
+
+            # Escort was requested, but destination is outside supported escort locations.
+            self.pending_unsupported_escort = True
+            print("⚠️  Escort request detected but no supported destination found")
+            return "unsupported"
         
-        return False
+        self.pending_unsupported_escort = False
+        return "none"
     
     def _handle_escort_confirmation(self, user_input: str) -> bool:
         """Check if user is confirming or rejecting pending escort."""
@@ -392,6 +417,15 @@ class RobotVoicePipeline:
         """Get formatted string of active users for context."""
         if not self.active_users:
             return "No users currently visible in camera."
+
+        active_speaker_info = ""
+        if self.active_speaker:
+            active_speaker_info = (
+                f"Active speaker for this utterance: {self.active_speaker.name} "
+                f"(ID: {self.active_speaker.id}, horizontal: {self.active_speaker.hor_angle}°, "
+                f"vertical: {self.active_speaker.ver_angle}°). "
+                "Address this person by name when appropriate."
+            )
         
         users_list = []
         for person in self.active_users:
@@ -399,8 +433,11 @@ class RobotVoicePipeline:
             if person.hor_angle or person.ver_angle:
                 user_info += f" at angle (horizontal: {person.hor_angle}°, vertical: {person.ver_angle}°)"
             users_list.append(user_info)
-        
-        return "Currently visible users: " + ", ".join(users_list)
+
+        visible_users_info = "Currently visible users: " + ", ".join(users_list)
+        if active_speaker_info:
+            return active_speaker_info + "\n" + visible_users_info
+        return visible_users_info
     
     def get_user_by_name(self, name: str):
         """Get user object by name (case-insensitive)."""
@@ -538,6 +575,13 @@ class RobotVoicePipeline:
             text = self._clean_text(transcript)
 
             if any(w in text for w in self.wake_words):
+                if not self._is_doa_within_interaction_range():
+                    print(
+                        f"🚫 Ignoring wake word outside DOA range: {self.last_mapped_doa}° "
+                        f"(allowed: {DOA_INTERACTION_MIN}° to {DOA_INTERACTION_MAX}°)"
+                    )
+                    return True
+
                 self.is_awake = True
                 # Update active user before greeting
                 self._update_active_user()
@@ -576,6 +620,13 @@ class RobotVoicePipeline:
 
             if not transcript:
                 return True
+
+            if not self._is_doa_within_interaction_range():
+                print(
+                    f"🚫 Ignoring query outside DOA range: {self.last_mapped_doa}° "
+                    f"(allowed: {DOA_INTERACTION_MIN}° to {DOA_INTERACTION_MAX}°)"
+                )
+                return True
             
             # Update active user based on who is currently visible
             self._update_active_user()
@@ -597,16 +648,17 @@ class RobotVoicePipeline:
                         print("⚠️ Cannot publish new user - ROS node not available")
                         self.pending_name_learning = None
             
-            # Update active user based on who is currently visible
-            self._update_active_user()
-            
-            # Track location mentions in user queries
+            # Track location mentions in the current query.
+            # Clear stale location when query doesn't include an escortable destination.
             transcript_lower = transcript.lower()
+            location_found_in_query = None
             for location_name, location_id in self.location_mapping.items():
                 if location_name in transcript_lower:
-                    self.last_mentioned_location = location_id
+                    location_found_in_query = location_id
                     print(f"📍 Location mentioned: {location_id}")
                     break
+
+            self.last_mentioned_location = location_found_in_query
             
             # Check if user is confirming/rejecting a pending escort
             # But ONLY accept yes/no as confirmation, not full questions
@@ -623,11 +675,28 @@ class RobotVoicePipeline:
                     elif any(word in transcript.lower() for word in self.rejection_words):
                         await self._speak("Okay, no problem.")
                     return True
+
+            # Handle confirmations for unsupported escort locations.
+            if self.pending_unsupported_escort and is_short_response:
+                if any(word in transcript.lower() for word in self.confirmation_words):
+                    await self._speak(
+                        "Sorry, I cannot escort to that location. "
+                        "I can escort only to the Department Office, Computer Lab, "
+                        "Head of the Department's Office, and Conference Room."
+                    )
+                    self.pending_unsupported_escort = False
+                    return True
+                if any(word in transcript.lower() for word in self.rejection_words):
+                    await self._speak("Okay, no problem.")
+                    self.pending_unsupported_escort = False
+                    return True
             
             # If user asks a new question while escort pending, clear stale state
             if self.pending_escort and not is_short_response:
                 print(f"⚠️  Clearing stale escort state: {self.pending_escort} (new query received)")
                 self.pending_escort = None
+            if self.pending_unsupported_escort and not is_short_response:
+                self.pending_unsupported_escort = False
             
             # Check for emotion display requests
             emotion_request = self._detect_emotion_display_request(transcript)
@@ -739,7 +808,12 @@ class RobotVoicePipeline:
         
         # Check if response is asking for escort confirmation
         if full_response:
-            self._check_escort_request(full_response)
+            escort_status = self._check_escort_request(full_response)
+            if escort_status == "unsupported":
+                await self._speak(
+                    "I can give directions there, but I can escort only to the Department Office, "
+                    "Computer Lab, Head of the Department's Office, and Conference Room."
+                )
     
     async def _classify_and_display_emotion(self, text: str):
         """

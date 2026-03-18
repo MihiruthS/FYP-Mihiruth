@@ -51,7 +51,9 @@ class AudioCapture:
             return
 
         self._loop = asyncio.get_event_loop()
-        self._audio_queue = asyncio.Queue(maxsize=10)  # Increased to prevent buffer underruns
+        # Slightly larger queue to reduce dropped chunks during brief CPU/network stalls
+        # without adding meaningful latency.
+        self._audio_queue = asyncio.Queue(maxsize=30)
 
         self._audio = pyaudio.PyAudio()
         

@@ -55,7 +55,7 @@ async def run_pipeline_with_ros2():
     pipeline.mouth_controller = mouth_controller
     
     # Start automatic blinking
-    # ros_node.start_blinking(mouth_controller)
+    ros_node.start_blinking(mouth_controller)
     
     # Initialize motor speeds to 0 for smooth movement
     ros_node.publish_motor_speed(0, 0)  # Left jaw
