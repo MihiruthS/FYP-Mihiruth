@@ -22,6 +22,7 @@ class VoicePipelineNode(Node):
         /motor_speed (Int32MultiArray): Motor speeds [channel, speed]
         /current_emotion (String): Current emotion being displayed
         /doa (Int32): Direction of Arrival in degrees (0-40)
+        /active_speaker (People): DOA-matched active speaker from /active_users
     
     Subscribers:
         /arrived (Bool): Notification when robot arrives at destination
@@ -62,6 +63,9 @@ class VoicePipelineNode(Node):
         self.doa_pub = self.create_publisher(
             Int32, '/doa', 10
         )
+        self.active_speaker_pub = self.create_publisher(
+            People, '/active_speaker', 10
+        )
         
         # Subscribers
         self.arrived_sub = self.create_subscription(
@@ -88,6 +92,7 @@ class VoicePipelineNode(Node):
         self.get_logger().info('  - /current_emotion')
         self.get_logger().info('  - /new_user')
         self.get_logger().info('  - /doa')
+        self.get_logger().info('  - /active_speaker')
         self.get_logger().info('Subscribing to:')
         self.get_logger().info('  - /arrived')
         self.get_logger().info('  - /active_users')
@@ -132,6 +137,13 @@ class VoicePipelineNode(Node):
         msg.data = angle
         self.doa_pub.publish(msg)
         self.get_logger().info(f'🎯 DOA published: {angle}°')
+
+    def publish_active_speaker(self, person: People):
+        """Publish the selected active speaker People message to /active_speaker."""
+        self.active_speaker_pub.publish(person)
+        self.get_logger().info(
+            f'🗣️ Active speaker: {person.name} (ID: {person.id}, hor_angle: {person.hor_angle}°)'
+        )
     
     def arrived_callback(self, msg: Bool):
         """Handle arrival notification from /arrived topic."""

@@ -44,7 +44,9 @@ class RobotVoicePipeline:
         self.displaying_emotions = False  # Flag to prevent duplicate emotion classification during displays
         self.active_users = []  # List of currently visible users from camera
         self.current_user_name = None  # Currently active user name for chat history
+        self.active_speaker = None  # Currently selected active speaker (People object)
         self.pending_name_learning = None  # ID of unknown user we're asking name for
+        self.last_mapped_doa = None  # Last mapped DOA angle in robot frame (-77 to +77)
         
         # Location mapping for escort commands
         self.location_mapping = {
@@ -180,8 +182,12 @@ class RobotVoicePipeline:
                     self.ros_node.publish_doa(mapped_doa)
                 else:
                     print(f"   ✓ DOA mapped and ready for publishing (ROS2 not enabled)")
+
+                # Cache most recent mapped DOA for active speaker selection
+                self.last_mapped_doa = mapped_doa
             except Exception as e:
                 print(f"⚠️  Failed to read DOA: {e}")
+                self.last_mapped_doa = None
         # Silently skip if DOA not available
 
     def _clean_text(self, text: str) -> str:
@@ -200,48 +206,49 @@ class RobotVoicePipeline:
             dict with 'is_request', 'emotions', 'show_all' keys
         """
         text_lower = text.lower()
-        
-        # Trigger phrases for showing emotions
-        show_triggers = [
-            "show me", "can you show", "display", "demonstrate",
-            "let me see", "i want to see", "show your"
-        ]
-        
-        # Check if this is an emotion display request
-        is_request = any(trigger in text_lower for trigger in show_triggers)
-        
-        # Also check for direct emotion face requests
-        face_triggers = ["face", "expression", "emotion"]
-        if any(trigger in text_lower for trigger in face_triggers):
-            is_request = True
-        
-        # Check for questions asking what/how emotions look like
-        look_like_patterns = [
-            "how does", "what does", "how do", "what do",
-            "look like", "looks like"
-        ]
-        if any(pattern in text_lower for pattern in look_like_patterns):
-            # Check if an emotion is mentioned
-            for emotion, keywords in self.emotion_keywords.items():
-                if any(keyword in text_lower for keyword in keywords):
-                    is_request = True
-                    break
-        
-        if not is_request:
-            return {"is_request": False, "emotions": [], "show_all": False}
-        
+
         # Check for "all emotions" or "range of emotions"
         show_all = any(phrase in text_lower for phrase in [
             "all emotion", "range of emotion", "all expression",
             "different emotion", "every emotion", "each emotion"
         ])
-        
+
         # Find which emotions are mentioned
         mentioned_emotions = []
         for emotion, keywords in self.emotion_keywords.items():
             if any(keyword in text_lower for keyword in keywords):
                 mentioned_emotions.append(emotion)
-        
+
+        # Trigger phrases for showing/demonstrating something
+        show_triggers = [
+            "show me", "can you show", "display", "demonstrate",
+            "let me see", "i want to see", "show your"
+        ]
+        has_show_trigger = any(trigger in text_lower for trigger in show_triggers)
+
+        # Context words that indicate this is about facial emotions, not directions/instructions
+        face_triggers = ["face", "expression", "emotion", "emotions"]
+        has_face_context = any(trigger in text_lower for trigger in face_triggers)
+
+        # Questions specifically asking how an emotion looks
+        look_like_patterns = [
+            "how does", "what does", "how do", "what do",
+            "look like", "looks like"
+        ]
+        asks_look_like = any(pattern in text_lower for pattern in look_like_patterns)
+
+        # Only treat as emotion-display request when emotion/face context is present.
+        is_request = False
+        if show_all:
+            is_request = True
+        elif has_show_trigger and (has_face_context or len(mentioned_emotions) > 0):
+            is_request = True
+        elif asks_look_like and len(mentioned_emotions) > 0:
+            is_request = True
+
+        if not is_request:
+            return {"is_request": False, "emotions": [], "show_all": False}
+
         return {
             "is_request": True,
             "emotions": mentioned_emotions,
@@ -405,9 +412,9 @@ class RobotVoicePipeline:
     
     def _get_personalized_greeting(self) -> str:
         """Get greeting message, personalized if user is visible in camera."""
-        if self.active_users and len(self.active_users) > 0:
-            # Get first visible user's name
-            first_user = self.active_users[0]
+        if self.active_speaker:
+            # Use detected active speaker for personalized greeting
+            first_user = self.active_speaker
             
             # Check if user is unknown
             if first_user.name and first_user.name.lower() == 'unknown':
@@ -419,6 +426,21 @@ class RobotVoicePipeline:
         else:
             # Default greeting if no users visible
             return "Hello! How can I help you?"
+
+    def _select_active_speaker(self):
+        """Select active speaker by closest horizontal angle to latest DOA."""
+        if not self.active_users:
+            return None
+
+        # Fallback when DOA is not available yet
+        if self.last_mapped_doa is None:
+            return self.active_users[0]
+
+        # Choose the person whose horizontal angle is closest to mapped DOA
+        return min(
+            self.active_users,
+            key=lambda person: abs(person.hor_angle - self.last_mapped_doa)
+        )
     
     def _extract_name_from_response(self, text: str) -> str:
         """Extract a person's name from their response."""
@@ -465,16 +487,26 @@ class RobotVoicePipeline:
     def _update_active_user(self):
         """Update active user based on camera data and switch conversation history."""
         if self.active_users and len(self.active_users) > 0:
-            # Use first visible user's name as active user
-            first_user = self.active_users[0]
-            new_user_name = first_user.name.lower() if first_user.name else None
+            # Select speaker by DOA/hor_angle matching
+            selected_user = self._select_active_speaker()
+            self.active_speaker = selected_user
+
+            # Publish exact selected People object to /active_speaker
+            if selected_user and hasattr(self, 'ros_node') and self.ros_node:
+                self.ros_node.publish_active_speaker(selected_user)
+
+            new_user_name = selected_user.name.lower() if selected_user and selected_user.name else None
             
             if new_user_name and new_user_name != self.current_user_name:
                 self.current_user_name = new_user_name
                 self.agent.set_active_user(new_user_name)
-                print(f"Active user changed to: {first_user.name} (ID: {first_user.id})")
+                print(
+                    f"Active user changed to: {selected_user.name} (ID: {selected_user.id}, "
+                    f"hor_angle: {selected_user.hor_angle}°, doa: {self.last_mapped_doa}°)"
+                )
         else:
             # No users visible - use generic conversation
+            self.active_speaker = None
             if self.current_user_name is not None:
                 self.current_user_name = None
                 self.agent.set_active_user(None)
@@ -547,16 +579,6 @@ class RobotVoicePipeline:
             
             # Update active user based on who is currently visible
             self._update_active_user()
-            
-            # Check if current user is unknown and we haven't asked for their name yet
-            if (self.active_users and len(self.active_users) > 0 and 
-                self.pending_name_learning is None):
-                first_user = self.active_users[0]
-                if first_user.name and first_user.name.lower() == 'unknown':
-                    # Unknown user is talking - ask for their name
-                    self.pending_name_learning = first_user.id
-                    await self._speak("I don't think we've met before. May I know your name?")
-                    return True
             
             # Check if we're learning a user's name
             if self.pending_name_learning is not None:
@@ -644,6 +666,15 @@ class RobotVoicePipeline:
                     return True
 
             await self._stream_response(transcript)
+
+            # Ask unknown user's name after answering their question.
+            if (self.active_users and len(self.active_users) > 0 and
+                self.pending_name_learning is None):
+                detected_user = self.active_speaker if self.active_speaker else self._select_active_speaker()
+                if detected_user and detected_user.name and detected_user.name.lower() == 'unknown':
+                    self.pending_name_learning = detected_user.id
+                    await self._speak("By the way, I don't think we've met before. May I know your name?")
+
             return True
 
         except KeyboardInterrupt:
